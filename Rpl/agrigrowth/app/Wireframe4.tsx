@@ -8,11 +8,11 @@ import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import AuthModal from "@/components/AuthModal";
 
-const imgComplementary3 = "https://www.figma.com/api/mcp/asset/0f007e12-4c18-46b6-ad68-a156ab1be51b";
-const imgWallpaperDelDia1 = "https://www.figma.com/api/mcp/asset/6d79e7b3-a514-42ab-9341-11e7bb3be8e1";
-const imgRiceField01ByGarkiOnDeviantArt1 = "https://www.figma.com/api/mcp/asset/c54148b2-7c65-4659-a5fa-527677b9aead";
-const imgLogo = "https://www.figma.com/api/mcp/asset/90530aab-9c02-498f-97a0-e57018497d3e";
-const imgProfile = "https://www.figma.com/api/mcp/asset/03caec6e-0209-4de6-a510-5e7ebeb6fffd";
+const imgComplementary3 = "https://www.figma.com/api/mcp/asset/84e7de7d-b48c-4c40-b61c-1968ea49e884";
+const imgWallpaperDelDia1 = "https://www.figma.com/api/mcp/asset/4213c44b-ff10-496c-bc18-99da660c77f8";
+const imgRiceField01ByGarkiOnDeviantArt1 = "https://www.figma.com/api/mcp/asset/4883cfb8-9252-42df-9223-ab5a7e993930";
+const imgLogo = "https://www.figma.com/api/mcp/asset/1ec87735-8093-48cd-bfb5-5836d3ed91fd";
+const imgProfile = "https://www.figma.com/api/mcp/asset/31743631-af9c-4f0e-b6cb-164cffff6bf1";
 
 const featureCards = [
 	{

@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { UserCircle2 } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import { clearUser } from "@/lib/auth";
 
-const logoMark = "https://www.figma.com/api/mcp/asset/813046f5-6a05-4c55-88ef-71991801e0c3";
-const imgProfile = "https://www.figma.com/api/mcp/asset/868f4c87-5462-4de5-9ea4-945285f86067";
+const logoMark = "https://www.figma.com/api/mcp/asset/eb8b6bb8-e06c-41c9-9ec8-8aca0e559999";
 
 interface HeaderWithModalProps {
   onSignUpClick: () => void;
@@ -50,7 +50,7 @@ export default function HeaderWithModal({ onSignUpClick }: HeaderWithModalProps)
                 className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.9)] px-4 py-2 shadow-md text-white hover:bg-[rgba(54,90,26,1)] transition"
               >
                 <span className="text-lg font-medium">{user.name}</span>
-                <img alt="Profile" className="h-8 w-8 object-contain" src={imgProfile} />
+                <UserCircle2 className="h-8 w-8 text-white/95" strokeWidth={1.7} />
               </button>
               
               {showMenu && (

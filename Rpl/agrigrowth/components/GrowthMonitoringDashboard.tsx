@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useUser } from "@/hooks/useUser";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-const imgLogo = "https://www.figma.com/api/mcp/asset/90530aab-9c02-498f-97a0-e57018497d3e";
-const imgProfile = "https://www.figma.com/api/mcp/asset/03caec6e-0209-4de6-a510-5e7ebeb6fffd";
+const imgLogo = "https://www.figma.com/api/mcp/asset/1ec87735-8093-48cd-bfb5-5836d3ed91fd";
+const imgProfile = "https://www.figma.com/api/mcp/asset/31743631-af9c-4f0e-b6cb-164cffff6bf1";
 
 interface MeasurementData {
   day: number;

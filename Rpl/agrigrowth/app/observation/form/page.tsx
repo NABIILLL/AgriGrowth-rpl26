@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "react-hot-toast";
 
-const imgLogo = "https://www.figma.com/api/mcp/asset/90530aab-9c02-498f-97a0-e57018497d3e";
+const imgLogo = "https://www.figma.com/api/mcp/asset/1ec87735-8093-48cd-bfb5-5836d3ed91fd";
 
 interface FormData {
   trackerSelect: string;
@@ -15,7 +15,11 @@ interface FormData {
   plantHeight: string;
   leafCount: string;
   branchCount: string;
-  notes: string;
+  soilPh: string;
+  lightCondition: string;
+  plantCondition: string;
+  fertilizerType: string;
+  landArea: string;
 }
 
 interface TrackerData {
@@ -36,7 +40,11 @@ export default function ObservationForm() {
     plantHeight: "",
     leafCount: "",
     branchCount: "",
-    notes: "",
+    soilPh: "7",
+    lightCondition: "Cukup",
+    plantCondition: "Sehat",
+    fertilizerType: "NPK",
+    landArea: "1",
   });
 
   const [trackers, setTrackers] = useState<TrackerData[]>([]);
@@ -116,6 +124,26 @@ export default function ObservationForm() {
       toast.error("Masukkan jumlah daun yang valid");
       return;
     }
+    if (!formData.soilPh || parseFloat(formData.soilPh) < 0 || parseFloat(formData.soilPh) > 14) {
+      toast.error("Masukkan nilai pH tanah yang valid (0-14)");
+      return;
+    }
+    if (!formData.lightCondition.trim()) {
+      toast.error("Kondisi cahaya wajib diisi");
+      return;
+    }
+    if (!formData.plantCondition.trim()) {
+      toast.error("Kondisi tanaman wajib diisi");
+      return;
+    }
+    if (!formData.fertilizerType.trim()) {
+      toast.error("Jenis pupuk wajib diisi");
+      return;
+    }
+    if (!formData.landArea || parseFloat(formData.landArea) <= 0) {
+      toast.error("Luas lahan wajib diisi dan harus lebih dari 0");
+      return;
+    }
 
     setSubmitting(true);
 
@@ -134,7 +162,11 @@ export default function ObservationForm() {
         plant_height: parseFloat(formData.plantHeight),
         leaf_count: parseInt(formData.leafCount),
         branch_count: formData.branchCount ? parseInt(formData.branchCount) : 0,
-        notes: formData.notes || null,
+        soil_ph: parseFloat(formData.soilPh),
+        light_condition: formData.lightCondition.trim(),
+        plant_condition: formData.plantCondition.trim(),
+        fertilizer_type: formData.fertilizerType.trim(),
+        land_area: parseFloat(formData.landArea),
       });
 
       const { error } = await supabase
@@ -145,11 +177,17 @@ export default function ObservationForm() {
           plant_height: parseFloat(formData.plantHeight),
           leaf_count: parseInt(formData.leafCount),
           branch_count: formData.branchCount ? parseInt(formData.branchCount) : 0,
-          notes: formData.notes || null,
-        });
+          soil_ph: parseFloat(formData.soilPh),
+          light_condition: formData.lightCondition.trim(),
+          plant_condition: formData.plantCondition.trim(),
+          fertilizer_type: formData.fertilizerType.trim(),
+          land_area: parseFloat(formData.landArea),
+        })
+        .select()
+        .single();
 
       if (error) {
-        console.error("Supabase insert error:", error);
+        console.error("Supabase insert error:", error, JSON.stringify(error));
         throw error;
       }
 
@@ -158,9 +196,9 @@ export default function ObservationForm() {
       
       // Redirect to history page
       router.push(`/observation/${selectedTracker.plant_type}/history`);
-    } catch (error) {
-      console.error("Error saving data:", error);
-      toast.error("Gagal menyimpan data pengamatan");
+    } catch (error: any) {
+      console.error("Error saving data:", error, JSON.stringify(error));
+      toast.error(`Gagal menyimpan data pengamatan: ${error?.message ?? "Unknown error"}`);
       setSubmitting(false);
     }
   };
@@ -332,17 +370,82 @@ export default function ObservationForm() {
               />
             </div>
 
-            {/* Notes */}
+            {/* Soil PH */}
             <div>
               <label className="block text-sm font-bold text-[#365a1a] mb-2">
-                Catatan (Opsional)
+                pH Tanah *
               </label>
-              <textarea
-                name="notes"
-                value={formData.notes}
+              <input
+                type="number"
+                name="soilPh"
+                value={formData.soilPh}
                 onChange={handleChange}
-                placeholder="Tambahkan catatan atau pengamatan khusus..."
-                rows={4}
+                placeholder="Contoh: 6.5"
+                step="0.1"
+                min="0"
+                max="14"
+                className="w-full rounded-lg border-2 border-[#365a1a] px-4 py-3 text-[#365a1a] placeholder:text-gray-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#365a1a] focus:ring-offset-2"
+              />
+            </div>
+
+            {/* Light Condition */}
+            <div>
+              <label className="block text-sm font-bold text-[#365a1a] mb-2">
+                Kondisi Cahaya *
+              </label>
+              <input
+                type="text"
+                name="lightCondition"
+                value={formData.lightCondition}
+                onChange={handleChange}
+                placeholder="Contoh: Cukup"
+                className="w-full rounded-lg border-2 border-[#365a1a] px-4 py-3 text-[#365a1a] placeholder:text-gray-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#365a1a] focus:ring-offset-2"
+              />
+            </div>
+
+            {/* Plant Condition */}
+            <div>
+              <label className="block text-sm font-bold text-[#365a1a] mb-2">
+                Kondisi Tanaman *
+              </label>
+              <input
+                type="text"
+                name="plantCondition"
+                value={formData.plantCondition}
+                onChange={handleChange}
+                placeholder="Contoh: Sehat"
+                className="w-full rounded-lg border-2 border-[#365a1a] px-4 py-3 text-[#365a1a] placeholder:text-gray-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#365a1a] focus:ring-offset-2"
+              />
+            </div>
+
+            {/* Fertilizer Type */}
+            <div>
+              <label className="block text-sm font-bold text-[#365a1a] mb-2">
+                Jenis Pupuk *
+              </label>
+              <input
+                type="text"
+                name="fertilizerType"
+                value={formData.fertilizerType}
+                onChange={handleChange}
+                placeholder="Contoh: NPK"
+                className="w-full rounded-lg border-2 border-[#365a1a] px-4 py-3 text-[#365a1a] placeholder:text-gray-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#365a1a] focus:ring-offset-2"
+              />
+            </div>
+
+            {/* Land Area */}
+            <div>
+              <label className="block text-sm font-bold text-[#365a1a] mb-2">
+                Luas Lahan *
+              </label>
+              <input
+                type="number"
+                name="landArea"
+                value={formData.landArea}
+                onChange={handleChange}
+                placeholder="Contoh: 1"
+                step="0.1"
+                min="0.1"
                 className="w-full rounded-lg border-2 border-[#365a1a] px-4 py-3 text-[#365a1a] placeholder:text-gray-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#365a1a] focus:ring-offset-2"
               />
             </div>

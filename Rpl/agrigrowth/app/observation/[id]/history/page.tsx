@@ -15,12 +15,22 @@ import {
   ResponsiveContainer
 } from "recharts";
 
-const imgGroup2 = "https://www.figma.com/api/mcp/asset/53ed4b6a-3620-47a5-954d-05c77858f9f7";
+const imgLogo = "https://www.figma.com/api/mcp/asset/2a7fcedd-9f30-4d90-8e58-295d41707608";
+
+interface TrackerData {
+  id: string;
+  title: string;
+  plant_type: string;
+  user_id: string;
+  created_at: string;
+}
 
 export default function ObservationHistory() {
   const params = useParams();
   const id = params.id as string;
   const { user, isLoading } = useUser();
+  const [trackers, setTrackers] = useState<TrackerData[]>([]);
+  const [selectedTrackerId, setSelectedTrackerId] = useState<string | null>(null);
   const [chartData, setChartData] = useState<any[]>([]);
   const [trackerTitle, setTrackerTitle] = useState("Tanaman");
   const [loading, setLoading] = useState(true);
@@ -36,12 +46,10 @@ export default function ObservationHistory() {
     avgLeafGrowth: 0
   });
 
+  // Fetch list of trackers first
   useEffect(() => {
-    async function fetchData() {
-      console.log("useEffect triggered - id:", id, "isLoading:", isLoading, "user:", user?.id);
-      
+    async function fetchTrackers() {
       if (!id || isLoading || !user) {
-        console.log("Early return: id=", id, "isLoading=", isLoading, "user=", user);
         if (!isLoading) setLoading(false);
         return;
       }
@@ -49,45 +57,49 @@ export default function ObservationHistory() {
       try {
         const typeLabel = id === "jagung" ? "Jagung" : id === "bawang" ? "Bawang Merah" : "Padi";
         setTrackerTitle(typeLabel);
-        console.log("Type label:", typeLabel);
 
-        // Cari semua tracker milik user ini dengan tipe tanaman yang sesuai
-        const { data: trackers, error: trackersError } = await supabase
+        // Fetch all distinct trackers for this plant type
+        const { data, error } = await supabase
           .from("trackers")
-          .select("id")
+          .select("id, title, plant_type, user_id, created_at")
           .eq("plant_type", id)
-          .eq("user_id", user.id);
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
         
-        console.log("Trackers query - plant_type:", id, "user_id:", user.id);
-        console.log("Trackers result:", trackers, "error:", trackersError);
-          
-        if (!trackers || trackers.length === 0) {
-          console.log("No trackers found");
-          setLoading(false);
-          return;
-        }
+        setTrackers(data || []);
+      } catch (error) {
+        console.error("Error fetching trackers:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTrackers();
+  }, [id, user, isLoading]);
 
-        const trackerIds = trackers.map(t => t.id);
-        console.log("Tracker IDs:", trackerIds);
+  // Fetch chart data when tracker is selected
+  useEffect(() => {
+    async function fetchChartData() {
+      if (!selectedTrackerId || !user) return;
 
-        const { data: logsData, error: logsError } = await supabase
+      try {
+        const { data: logsData, error } = await supabase
           .from("growth_logs")
           .select("*")
-          .in("tracker_id", trackerIds)
+          .eq("tracker_id", selectedTrackerId)
           .order("day_number", { ascending: true });
 
-        console.log("Growth logs query - trackerIds:", trackerIds);
-        console.log("Growth logs result:", logsData, "error:", logsError);
+        if (error) throw error;
 
         if (logsData && logsData.length > 0) {
-          console.log("Processing", logsData.length, "log entries");
           const data = logsData.map(log => ({
             day: `Hari ${log.day_number}`,
             dayNumber: log.day_number,
             height: log.plant_height || 0,
             leaf: log.leaf_count || 0,
           }));
-          console.log("Chart data:", data);
+          
           setChartData(data);
           
           if (data.length > 0) {
@@ -104,27 +116,24 @@ export default function ObservationHistory() {
               avgHeightGrowth: (last.height - first.height) / daysSpan,
               avgLeafGrowth: (last.leaf - first.leaf) / daysSpan
             };
-            console.log("Stats:", newStats);
             setStats(newStats);
           }
         } else {
-          console.log("No logs data found");
+          setChartData([]);
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
+        console.error("Error fetching chart data:", error);
       }
     }
-    fetchData();
-  }, [id, user, isLoading]);
+    fetchChartData();
+  }, [selectedTrackerId, user]);
 
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       {/* Header */}
       <header className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
         <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2.5 hover:opacity-80 transition">
-          <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgGroup2} />
+          <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
         </Link>
 
@@ -171,10 +180,61 @@ export default function ObservationHistory() {
           {loading ? (
             <div className="flex flex-col items-center justify-center rounded-[20px] bg-white py-16 px-6 text-center shadow-sm border border-gray-100">
               <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#365a1a] border-t-transparent"></div>
-              <p className="mt-4 text-[#365a1a] font-medium">Memuat data grafik...</p>
+              <p className="mt-4 text-[#365a1a] font-medium">Memuat data lahan...</p>
+            </div>
+          ) : trackers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-[30px] border-2 border-dashed border-[#9fb08d] bg-white py-24 px-6 text-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#f0f4eb] mb-6">
+                <span className="text-5xl">🚜</span>
+              </div>
+              <h3 className="text-[24px] font-bold text-[#365a1a]">Belum Ada Data Lahan</h3>
+              <p className="mt-3 text-[16px] text-[#365a1a]/70 max-w-md">
+                Anda belum membuat tracker lahan untuk {trackerTitle}. Buat tracker dan mulai input data pengamatan.
+              </p>
+              <Link
+                href="/dashboard"
+                className="mt-6 inline-block rounded-full bg-[#365a1a] px-8 py-3 text-sm font-bold text-white hover:bg-[#2d4915] transition"
+              >
+                Buat Tracker Lahan
+              </Link>
+            </div>
+          ) : !selectedTrackerId ? (
+            <div className="rounded-[20px] border-2 border-[#365a1a] bg-white p-8 shadow-sm">
+              <h2 className="mb-6 text-[24px] font-bold sm:text-[28px]">🌾 Pilih Lahan yang Ingin Dimonitor</h2>
+              <p className="text-[#365a1a]/70 mb-6">Anda memiliki {trackers.length} lahan yang telah dicatat untuk {trackerTitle}:</p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {trackers.map((tracker) => (
+                  <button
+                    key={tracker.id}
+                    onClick={() => setSelectedTrackerId(tracker.id)}
+                    className="p-4 rounded-[16px] border-2 border-[#365a1a] bg-gradient-to-br from-[#f0f4eb] to-white hover:bg-[#e8ede0] hover:shadow-md transition text-left"
+                  >
+                    <h3 className="font-bold text-[18px] text-[#365a1a] mb-2">{tracker.title}</h3>
+                    <p className="text-sm text-[#365a1a]/60">
+                      Dibuat: {new Date(tracker.created_at).toLocaleDateString('id-ID', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </p>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : chartData.length > 0 ? (
             <div className="space-y-8">
+              <div className="flex items-center justify-between rounded-[16px] bg-[#f0f4eb] p-4 border-l-4 border-[#365a1a]">
+                <div>
+                  <p className="text-sm text-[#365a1a]/70">Lahan yang dipilih:</p>
+                  <p className="text-[20px] font-bold text-[#365a1a]">{trackers.find(t => t.id === selectedTrackerId)?.title}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedTrackerId(null)}
+                  className="rounded-full bg-[#365a1a] text-white px-4 py-2 text-sm font-semibold hover:bg-[#2d4915] transition"
+                >
+                  ← Kembali ke Daftar
+                </button>
+              </div>
               
               {/* Grafik Tinggi Tanaman */}
               <div className="rounded-[20px] border-2 border-[#365a1a] bg-white p-6 shadow-sm">
@@ -260,16 +320,16 @@ export default function ObservationHistory() {
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#f0f4eb] mb-6">
                 <span className="text-5xl">📊</span>
               </div>
-              <h3 className="text-[24px] font-bold text-[#365a1a]">Belum Ada Data Grafik</h3>
+              <h3 className="text-[24px] font-bold text-[#365a1a]">Belum Ada Data Pengamatan</h3>
               <p className="mt-3 text-[16px] text-[#365a1a]/70 max-w-md">
-                Anda memerlukan setidaknya satu data pengamatan untuk membuat grafik. Mulai dengan input data pengamatan sekarang.
+                Lahan "{trackers.find(t => t.id === selectedTrackerId)?.title}" belum memiliki data pengamatan. Mulai dengan input data pengamatan sekarang.
               </p>
-              <Link
-                href="/observation/form"
-                className="mt-6 inline-block rounded-full bg-[#365a1a] px-8 py-3 text-sm font-bold text-white hover:bg-[#2d4915] transition"
+              <button
+                onClick={() => setSelectedTrackerId(null)}
+                className="mt-6 inline-block rounded-full bg-[#9fb08d] px-8 py-3 text-sm font-bold text-white hover:bg-[#8a9d7a] transition"
               >
-                Input Data Sekarang
-              </Link>
+                ← Kembali ke Daftar Lahan
+              </button>
             </div>
           )}
         </div>

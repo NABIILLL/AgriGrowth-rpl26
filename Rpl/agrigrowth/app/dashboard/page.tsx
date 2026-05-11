@@ -7,31 +7,36 @@ import { getUser, clearUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 
-const imgRice2 = "https://www.figma.com/api/mcp/asset/2d7af9f5-776e-41f7-851d-32ef06f4449b";
-const imgDownload41 = "https://www.figma.com/api/mcp/asset/d97cf4c8-1d28-42b7-b2d3-6398d7fe15a0";
-const imgPadiPraktikum = "https://www.figma.com/api/mcp/asset/f5e4867b-98ce-4c79-8726-44f31b684eb1";
-const imgLogo = "https://www.figma.com/api/mcp/asset/7e2c08f9-50c1-4c82-9fb4-6c4e4d40b86f";
-const imgProfile = "https://www.figma.com/api/mcp/asset/10282dce-8830-42b5-a166-2be852d48ad8";
-const imgResultField = "https://www.figma.com/api/mcp/asset/dd4fc15c-fc71-4d42-8ce3-f705b31b9834";
-const imgResultFieldMask = "https://www.figma.com/api/mcp/asset/00b5281f-3cfc-44f9-825b-9a2f16acc168";
+// Logo and profile images
+const imgLogo = "https://www.figma.com/api/mcp/asset/2a7fcedd-9f30-4d90-8e58-295d41707608";
+const imgProfile = "https://www.figma.com/api/mcp/asset/6e3b48fa-6d46-4818-a4c8-3a548e391ebd";
+
+// Growth tracker cards images
+const imgSawahBelakangKampus = "https://www.figma.com/api/mcp/asset/be7f6f1b-e0e9-42d0-9a7d-5a38770648c0";
+const imgJagungRezon = "https://www.figma.com/api/mcp/asset/156c8b0c-1b46-4d12-96c6-d779d2553252";
+const imgPadiPraktikum = "https://www.figma.com/api/mcp/asset/661ee958-6deb-464c-b320-6b78477a3c66";
+
+// Result page images
+const imgRice2 = "https://www.figma.com/api/mcp/asset/4a93ea06-574f-4e48-adb5-27b4d06d8288";
+const imgResultField = "https://www.figma.com/api/mcp/asset/4a93ea06-574f-4e48-adb5-27b4d06d8288";
 const imgPlantSheaf = "https://www.figma.com/api/mcp/asset/692cc31f-379d-4deb-9cc0-25c87e666058";
-const imgResultLogo = "https://www.figma.com/api/mcp/asset/10cd9835-92fa-4268-9d4f-e336cd4db25d";
-const imgResultProfile = "https://www.figma.com/api/mcp/asset/8abf3696-2490-4f40-96c6-58f8e7a9a696";
+const imgResultLogo = "https://www.figma.com/api/mcp/asset/2a7fcedd-9f30-4d90-8e58-295d41707608";
+const imgResultProfile = "https://www.figma.com/api/mcp/asset/6e3b48fa-6d46-4818-a4c8-3a548e391ebd";
 
 const cropCards = [
   {
-    id: 1,
-    title: "Padi",
-    image: imgRice2,
+    id: "padi",
+    title: "Sawah belakang kampus",
+    image: imgSawahBelakangKampus,
   },
   {
-    id: 2,
-    title: "Jagung",
-    image: imgDownload41,
+    id: "jagung",
+    title: "Jagung rezon",
+    image: imgJagungRezon,
   },
   {
-    id: 3,
-    title: "Bawang",
+    id: "bawang",
+    title: "Padi praktikum",
     image: imgPadiPraktikum,
   },
 ];
@@ -351,25 +356,30 @@ export default function Dashboard() {
         <section className="mx-auto w-full max-w-[1440px] px-5 pb-12 sm:px-10 lg:px-14">
           <div className="mx-auto w-full max-w-[1280px]">
             <h1 className="mt-2 text-[32px] font-extrabold leading-[1.08] text-[#365a1a] sm:mt-4 sm:text-[42px] lg:text-[58px]">
-              Start your ‘{activeTrackerTitle || "Sawah belakang kampus"}’ analysist
+              Start your ‘{activeTrackerTitle || "Sawah belakang kampus"}’ analysis
             </h1>
 
             <form onSubmit={handleSaveAnalysis} className="mt-6 space-y-5">
-              <div className="overflow-hidden border border-[#365a1a]">
+              <div className="group overflow-hidden border border-[#365a1a]">
                 <div className="bg-[#365a1a] px-4 py-2 text-center text-[14px] font-semibold text-white">
                   Input data hari pengamatan
                 </div>
+                <p className="max-h-0 overflow-hidden bg-white px-4 text-[12px] text-[#365a1a]/80 opacity-0 transition-all duration-200 group-focus-within:max-h-16 group-focus-within:py-2 group-focus-within:opacity-100">
+                  Isi nomor hari pengamatan. Tipe data: bilangan bulat (contoh: 1, 2, 3).
+                </p>
                 <div className="grid grid-cols-[1fr_170px] gap-px bg-[#365a1a]">
                   <input
                     type="text"
-                    placeholder="Hari ke-"
+                    placeholder="Keterangan (contoh: Hari ke-)"
                     className="h-[38px] bg-white px-4 text-[14px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]"
                   />
                   <div className="relative bg-white">
                     <input
                       name="day_number"
-                      type="text"
+                      type="number"
                       defaultValue="1"
+                      min="1"
+                      placeholder="Contoh: 1"
                       className="h-[38px] w-full bg-white px-4 pr-10 text-[14px] text-[#365a1a] outline-none"
                     />
                     <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#a7b99b]">⌄</span>
@@ -377,35 +387,44 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="overflow-hidden border border-[#365a1a]">
+              <div className="group overflow-hidden border border-[#365a1a]">
                 <div className="bg-[#365a1a] px-4 py-2 text-center text-[14px] font-semibold text-white">
                   Input data pertumbuhan tanaman
                 </div>
+                <p className="max-h-0 overflow-hidden bg-white px-4 text-[12px] text-[#365a1a]/80 opacity-0 transition-all duration-200 group-focus-within:max-h-16 group-focus-within:py-2 group-focus-within:opacity-100">
+                  Tinggi tanaman: angka desimal (cm). Jumlah daun dan cabang: bilangan bulat.
+                </p>
                 <div className="grid grid-cols-1 gap-px bg-[#365a1a] sm:grid-cols-3">
-                  <input name="plant_height" type="text" required placeholder="Input tinggi tanaman............." className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
-                  <input name="leaf_count" type="text" required placeholder="Input jumlah daun............." className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
-                  <input name="branch_count" type="text" required placeholder="Input jumlah cabang............." className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
+                  <input name="plant_height" type="number" step="0.1" min="0" required placeholder="Tinggi tanaman (cm) - desimal, contoh: 12.5" className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
+                  <input name="leaf_count" type="number" min="0" required placeholder="Jumlah daun - bilangan bulat, contoh: 8" className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
+                  <input name="branch_count" type="number" min="0" required placeholder="Jumlah cabang - bilangan bulat, contoh: 2" className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
                 </div>
               </div>
 
-              <div className="overflow-hidden border border-[#365a1a]">
+              <div className="group overflow-hidden border border-[#365a1a]">
                 <div className="bg-[#365a1a] px-4 py-2 text-center text-[14px] font-semibold text-white">
                   Input kondisi lingkungan
                 </div>
+                <p className="max-h-0 overflow-hidden bg-white px-4 text-[12px] text-[#365a1a]/80 opacity-0 transition-all duration-200 group-focus-within:max-h-16 group-focus-within:py-2 group-focus-within:opacity-100">
+                  pH tanah: angka desimal 0-14. Kondisi cahaya dan kondisi tanaman: teks singkat.
+                </p>
                 <div className="grid grid-cols-1 gap-px bg-[#365a1a] sm:grid-cols-3">
-                  <input name="soil_ph" type="text" required placeholder="Input pH tanah............." className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
-                  <input name="light_condition" type="text" required placeholder="Input kondisi cahaya............." className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
-                  <input name="plant_condition" type="text" required placeholder="Input kondisi tanaman............." className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
+                  <input name="soil_ph" type="number" step="0.1" min="0" max="14" required placeholder="pH tanah (0-14) - desimal, contoh: 6.5" className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
+                  <input name="light_condition" type="text" required placeholder="Kondisi cahaya - teks, contoh: Terik / Teduh" className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
+                  <input name="plant_condition" type="text" required placeholder="Kondisi tanaman - teks, contoh: Sehat" className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
                 </div>
               </div>
 
-              <div className="overflow-hidden border border-[#365a1a]">
+              <div className="group overflow-hidden border border-[#365a1a]">
                 <div className="bg-[#365a1a] px-4 py-2 text-center text-[14px] font-semibold text-white">
                   Kebutuhan pupuk dengan konversi luas lahan
                 </div>
+                <p className="max-h-0 overflow-hidden bg-white px-4 text-[12px] text-[#365a1a]/80 opacity-0 transition-all duration-200 group-focus-within:max-h-16 group-focus-within:py-2 group-focus-within:opacity-100">
+                  Jenis pupuk: teks. Luas lahan: angka desimal (misal m2 atau ha sesuai standar Anda).
+                </p>
                 <div className="grid grid-cols-1 gap-px bg-[#365a1a] sm:grid-cols-2">
-                  <input name="fertilizer_type" type="text" required placeholder="Input Jenis pupuk............." className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
-                  <input name="land_area" type="text" required placeholder="Input luas lahan............." className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
+                  <input name="fertilizer_type" type="text" required placeholder="Jenis pupuk - teks, contoh: NPK" className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
+                  <input name="land_area" type="number" step="0.01" min="0" required placeholder="Luas lahan - desimal, contoh: 120.5" className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
                 </div>
               </div>
 

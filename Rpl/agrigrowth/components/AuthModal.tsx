@@ -6,7 +6,7 @@ import { saveUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
 const imgGroup2 =
-  "https://www.figma.com/api/mcp/asset/53ed4b6a-3620-47a5-954d-05c77858f9f7";
+  "https://www.figma.com/api/mcp/asset/eb8b6bb8-e06c-41c9-9ec8-8aca0e559999";
 
 interface AuthModalProps {
   isOpen: boolean;

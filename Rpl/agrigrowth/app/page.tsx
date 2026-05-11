@@ -1,9 +1,9 @@
 "use client";
 
 const heroBackground =
-  "https://www.figma.com/api/mcp/asset/4a0a5fcd-125f-467e-8551-e507b578c5f6";
+  "https://www.figma.com/api/mcp/asset/dda11176-c1ae-42fa-af1c-91d858f5e2ae";
 const logoMark =
-  "https://www.figma.com/api/mcp/asset/813046f5-6a05-4c55-88ef-71991801e0c3";
+  "https://www.figma.com/api/mcp/asset/eb8b6bb8-e06c-41c9-9ec8-8aca0e559999";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";

@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 
-const imgLogo = "https://www.figma.com/api/mcp/asset/291a570e-3898-477c-a806-4a2ec45e4d6f";
-const imgProfile = "https://www.figma.com/api/mcp/asset/868f4c87-5462-4de5-9ea4-945285f86067";
+const imgLogo = "https://www.figma.com/api/mcp/asset/2a7fcedd-9f30-4d90-8e58-295d41707608";
+const imgProfile = "https://www.figma.com/api/mcp/asset/6e3b48fa-6d46-4818-a4c8-3a548e391ebd";
 
 import { useUser } from "@/hooks/useUser";
 import AuthModal from "@/components/AuthModal";
