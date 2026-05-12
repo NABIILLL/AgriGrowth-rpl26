@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
+import { supabase } from "@/lib/supabase";
+import { clearUser } from "@/lib/auth";
 
 const imgGrowthTrackerImage = "https://www.figma.com/api/mcp/asset/0f007e12-4c18-46b6-ad68-a156ab1be51b";
 const imgLogo = "https://www.figma.com/api/mcp/asset/90530aab-9c02-498f-97a0-e57018497d3e";
@@ -9,6 +12,18 @@ const imgProfile = "https://www.figma.com/api/mcp/asset/03caec6e-0209-4de6-a510-
 
 export default function GrowthTracker() {
   const { user, isLoading } = useUser();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      clearUser();
+      router.push("/");
+    } catch (error) {
+      console.error("Failed to logout:", error);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       {/* Header */}
@@ -30,10 +45,32 @@ export default function GrowthTracker() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] sm:text-[18px]">
-          <span>{!isLoading && user ? user.name : "Guest"}</span>
-          <img alt="Profile" className="h-8 w-8 object-contain" src={imgProfile} />
-        </div>
+        {!isLoading && (
+          user ? (
+            <div className="flex items-center gap-4">
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
+              >
+                <span>{user.name}</span>
+                <img alt="Profile" className="h-8 w-8 object-contain" src={imgProfile} />
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/"
+              className="rounded-full bg-[#365a1a] px-5 py-2 text-[16px] font-medium text-white shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:bg-[#2d4915] sm:text-[18px]"
+            >
+              Login / Sign Up
+            </Link>
+          )
+        )}
       </header>
 
       {/* Content */}

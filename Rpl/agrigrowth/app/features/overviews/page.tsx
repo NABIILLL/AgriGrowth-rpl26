@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { supabase } from "@/lib/supabase";
-import { getUser } from "@/lib/auth";
+import { clearUser } from "@/lib/auth";
 import { toast } from "react-hot-toast";
 import { Trash2 } from "lucide-react";
 
@@ -27,15 +27,18 @@ export default function Overviews() {
   const router = useRouter();
   const [trackers, setTrackers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState("Guest");
   const [deleting, setDeleting] = useState<string | null>(null);
+  const displayName = !isLoading && user ? user.name : "Guest";
 
-  useEffect(() => {
-    const currentUser = getUser();
-    if (currentUser && currentUser.name) {
-      setUserName(currentUser.name);
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      clearUser();
+      router.push("/");
+    } catch (error) {
+      console.error("Failed to logout:", error);
     }
-  }, []);
+  };
 
   useEffect(() => {
     if (isLoading || !user) {
@@ -124,10 +127,32 @@ export default function Overviews() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] sm:text-[18px]">
-          <span>{!isLoading && user ? user.name : userName}</span>
-          <img alt="Profile" className="h-8 w-8 object-contain" src={imgProfile} />
-        </div>
+        {!isLoading && (
+          user ? (
+            <div className="flex items-center gap-4">
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
+              >
+                <span>{displayName}</span>
+                <img alt="Profile" className="h-8 w-8 object-contain" src={imgProfile} />
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/"
+              className="rounded-full bg-[#365a1a] px-5 py-2 text-[16px] font-medium text-white shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:bg-[#2d4915] sm:text-[18px]"
+            >
+              Login / Sign Up
+            </Link>
+          )
+        )}
       </header>
 
       {/* Content */}
@@ -213,7 +238,7 @@ export default function Overviews() {
                       </p>
                       <div className="flex items-center gap-3">
                         <Link
-                          href={`/observation/${tracker.plant_type}/history`}
+                          href={`/observation/${tracker.plant_type}/history?trackerId=${tracker.id}`}
                           className="rounded-full bg-[#365a1a] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-[#2d4915]"
                         >
                           Lihat Detail →

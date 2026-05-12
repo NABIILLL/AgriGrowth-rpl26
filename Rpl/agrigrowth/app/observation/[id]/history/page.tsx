@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
@@ -27,7 +27,9 @@ interface TrackerData {
 
 export default function ObservationHistory() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id as string;
+  const trackerIdFromQuery = searchParams.get("trackerId");
   const { user, isLoading } = useUser();
   const [trackers, setTrackers] = useState<TrackerData[]>([]);
   const [selectedTrackerId, setSelectedTrackerId] = useState<string | null>(null);
@@ -68,7 +70,15 @@ export default function ObservationHistory() {
 
         if (error) throw error;
         
-        setTrackers(data || []);
+        const fetchedTrackers = data || [];
+        setTrackers(fetchedTrackers);
+
+        if (trackerIdFromQuery) {
+          const isTrackerOwned = fetchedTrackers.some((tracker) => tracker.id === trackerIdFromQuery);
+          if (isTrackerOwned) {
+            setSelectedTrackerId(trackerIdFromQuery);
+          }
+        }
       } catch (error) {
         console.error("Error fetching trackers:", error);
       } finally {
@@ -76,7 +86,7 @@ export default function ObservationHistory() {
       }
     }
     fetchTrackers();
-  }, [id, user, isLoading]);
+  }, [id, user, isLoading, trackerIdFromQuery]);
 
   // Fetch chart data when tracker is selected
   useEffect(() => {

@@ -50,10 +50,13 @@ export default function About() {
         {!isLoading && (
           user ? (
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] sm:text-[18px]">
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
+              >
                 <span>{user.name}</span>
                 <img alt="Profile" className="h-8 w-8 object-contain" src={imgProfile} />
-              </div>
+              </Link>
               <button onClick={handleLogout} className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition">
                 Logout
               </button>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getUser, clearUser } from "@/lib/auth";
+import { useUser } from "@/hooks/useUser";
 import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 
@@ -26,17 +27,17 @@ const imgResultProfile = "https://www.figma.com/api/mcp/asset/6e3b48fa-6d46-4818
 const cropCards = [
   {
     id: "padi",
-    title: "Sawah belakang kampus",
+    title: "Padi",
     image: imgSawahBelakangKampus,
   },
   {
     id: "jagung",
-    title: "Jagung rezon",
+    title: "Jagung",
     image: imgJagungRezon,
   },
   {
     id: "bawang",
-    title: "Padi praktikum",
+    title: "Bawang Merah",
     image: imgPadiPraktikum,
   },
 ];
@@ -50,15 +51,9 @@ export default function Dashboard() {
   const [activeTrackerTitle, setActiveTrackerTitle] = useState("");
   const [activeTrackerId, setActiveTrackerId] = useState<string | null>(null);
   const [activePlantLabel, setActivePlantLabel] = useState("Padi");
-  const [userName, setUserName] = useState("Guest");
+  const { user, isLoading } = useUser();
   const router = useRouter();
-
-  useEffect(() => {
-    const user = getUser();
-    if (user && user.name) {
-      setUserName(user.name);
-    }
-  }, []);
+  const displayName = !isLoading && user ? user.name : "Guest";
 
   const handleLogout = async () => {
     try {
@@ -224,10 +219,13 @@ export default function Dashboard() {
             </nav>
 
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[14px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] sm:text-[16px] lg:text-[18px]">
-                <span>{userName}</span>
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[14px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[16px] lg:text-[18px]"
+              >
+                <span>{displayName}</span>
                 <img alt="Profile" className="h-8 w-8 object-contain" src={imgResultProfile} />
-              </div>
+              </Link>
               <button
                 onClick={handleLogout}
                 className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition"
@@ -340,10 +338,13 @@ export default function Dashboard() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] sm:text-[18px]">
-              <span>{userName}</span>
+            <Link
+              href="/profile"
+              className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
+            >
+              <span>{displayName}</span>
               <img alt="Profile" className="h-8 w-8 object-contain" src={imgProfile} />
-            </div>
+            </Link>
             <button
               onClick={handleLogout}
               className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition"
@@ -462,10 +463,13 @@ export default function Dashboard() {
         </nav>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] sm:text-[18px]">
-            <span>{userName}</span>
+          <Link
+            href="/profile"
+            className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
+          >
+            <span>{displayName}</span>
             <img alt="Profile" className="h-8 w-8 object-contain" src={imgProfile} />
-          </div>
+          </Link>
           <button
             onClick={handleLogout}
             className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition"

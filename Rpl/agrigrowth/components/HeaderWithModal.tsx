@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { UserCircle2 } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import { clearUser } from "@/lib/auth";
@@ -14,7 +14,6 @@ interface HeaderWithModalProps {
 
 export default function HeaderWithModal({ onSignUpClick }: HeaderWithModalProps) {
   const { user, isLoading } = useUser();
-  const [showMenu, setShowMenu] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -24,7 +23,6 @@ export default function HeaderWithModal({ onSignUpClick }: HeaderWithModalProps)
       console.error("Logout failed:", error);
     }
     clearUser();
-    setShowMenu(false);
     window.location.reload();
   };
 
@@ -44,28 +42,20 @@ export default function HeaderWithModal({ onSignUpClick }: HeaderWithModalProps)
 
         {!isLoading && (
           user ? (
-            <div className="relative">
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.9)] px-4 py-2 shadow-md text-white hover:bg-[rgba(54,90,26,1)] transition"
+            <div className="flex items-center gap-3">
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.9)] px-4 py-2 shadow-md text-white transition hover:bg-[rgba(54,90,26,1)]"
               >
                 <span className="text-lg font-medium">{user.name}</span>
                 <UserCircle2 className="h-8 w-8 text-white/95" strokeWidth={1.7} />
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="text-sm font-semibold text-white/90 hover:text-white transition"
+              >
+                Logout
               </button>
-              
-              {showMenu && (
-                <div className="absolute right-0 mt-2 w-48 rounded-lg bg-white shadow-lg overflow-hidden z-50">
-                  <div className="px-4 py-3 border-b border-gray-200">
-                    <p className="text-sm font-semibold text-gray-800">{user.email || user.name}</p>
-                  </div>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full px-4 py-2 text-left text-sm font-medium text-red-600 hover:bg-gray-100 transition"
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
             </div>
           ) : (
             <button

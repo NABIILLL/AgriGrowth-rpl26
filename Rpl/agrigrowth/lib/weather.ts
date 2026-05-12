@@ -9,6 +9,7 @@ export interface WeatherData {
   longitude: number;
   temperature: number;
   condition: string;
+  weatherCode: number;
   humidity: number;
   windSpeed: number;
   windDirection: number;
@@ -119,6 +120,7 @@ export async function getCurrentWeather(
       longitude,
       temperature: Math.round(current.temperature_2m),
       condition: getWeatherDescription(current.weather_code),
+      weatherCode: current.weather_code,
       humidity: current.relative_humidity_2m,
       windSpeed: Math.round(current.wind_speed_10m),
       windDirection: current.wind_direction_10m,
@@ -189,23 +191,54 @@ export async function getHourlyWeather(
   longitude: number
 ): Promise<HourlyWeatherData | null> {
   try {
-    const params = new URLSearchParams({
+    const buildParams = (hourlyVariables: string) =>
+      new URLSearchParams({
       latitude: latitude.toString(),
       longitude: longitude.toString(),
-      hourly:
-        "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m",
-      timezone: "Asia/Jakarta",
-    });
+        hourly: hourlyVariables,
+        timezone: "Asia/Jakarta",
+        forecast_hours: "24",
+        cell_selection: "nearest",
+      });
 
-    const response = await fetch(
-      `https://api.open-meteo.com/v1/forecast?${params}`,
-      { next: { revalidate: 600 } } // Cache for 10 minutes
+    const fetchHourly = async (hourlyVariables: string) => {
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?${buildParams(hourlyVariables)}`,
+        { next: { revalidate: 600 } } // Cache for 10 minutes
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.warn("Open-Meteo hourly request failed", {
+          status: response.status,
+          body: errorBody,
+        });
+        return null;
+      }
+
+      const data = await response.json();
+      return data.hourly as HourlyWeatherData | undefined;
+    };
+
+    const primaryHourly = await fetchHourly(
+      "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m"
     );
 
-    if (!response.ok) throw new Error("Failed to fetch hourly data");
+    if (primaryHourly) {
+      return primaryHourly;
+    }
 
-    const data = await response.json();
-    return data.hourly;
+    const fallbackHourly = await fetchHourly("temperature_2m,weather_code,wind_speed_10m");
+
+    if (!fallbackHourly) {
+      return null;
+    }
+
+    return {
+      ...fallbackHourly,
+      relative_humidity_2m: fallbackHourly.relative_humidity_2m ?? fallbackHourly.temperature_2m.map(() => 0),
+      precipitation: fallbackHourly.precipitation ?? fallbackHourly.temperature_2m.map(() => 0),
+    };
   } catch (error) {
     console.error("Error fetching hourly weather:", error);
     return null;

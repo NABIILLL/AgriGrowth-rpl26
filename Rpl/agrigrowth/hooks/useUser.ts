@@ -8,6 +8,17 @@ interface User {
   id?: string;
 }
 
+const resolveUserName = (sessionUser: any) => {
+  const metadata = sessionUser?.user_metadata || {};
+  return (
+    metadata.name ||
+    metadata.full_name ||
+    metadata.preferred_username ||
+    sessionUser?.email?.split('@')[0] ||
+    'User'
+  );
+};
+
 export function useUser() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,7 +34,7 @@ export function useUser() {
         
         if (session && mounted) {
           const u = {
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            name: resolveUserName(session.user),
             email: session.user.email,
             id: session.user.id,
             role: session.user.user_metadata?.role
@@ -50,7 +61,7 @@ export function useUser() {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session && mounted) {
           const u = {
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            name: resolveUserName(session.user),
             email: session.user.email,
             id: session.user.id,
             role: session.user.user_metadata?.role
