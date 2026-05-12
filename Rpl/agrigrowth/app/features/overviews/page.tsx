@@ -109,7 +109,7 @@ export default function Overviews() {
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       {/* Header */}
-      <header className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
+      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
         <Link href="/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition">
           <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>

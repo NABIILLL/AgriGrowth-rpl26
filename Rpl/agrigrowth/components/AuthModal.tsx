@@ -11,6 +11,8 @@ const imgGroup2 =
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMode?: "signup" | "login";
+  initialStep?: Step;
 }
 
 type Step =
@@ -25,7 +27,7 @@ type Step =
   | "login-phone"
   | "login-phone-verify";
 
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, initialMode, initialStep }: AuthModalProps) {
   const [step, setStep] = useState<Step>("choice");
   const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
   const router = useRouter();
@@ -38,6 +40,31 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [phone, setPhone] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [emailVerificationCode, setEmailVerificationCode] = useState("");
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    if (initialMode) {
+      setAuthMode(initialMode);
+    }
+
+    if (initialStep) {
+      setStep(initialStep);
+      return;
+    }
+
+    if (initialMode === "login") {
+      setStep("login-email");
+      return;
+    }
+
+    if (initialMode === "signup") {
+      setStep("signup-email");
+      return;
+    }
+
+    setStep("choice");
+  }, [isOpen, initialMode, initialStep]);
 
   if (!isOpen) return null;
 
@@ -145,13 +172,15 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       });
       if (error) throw error;
 
+      const roleFromDb = await resolveUserRole(data.user?.id, data.session?.access_token, data.user?.user_metadata?.role);
+
       saveUser({
         id: data.user?.id,
         email,
         name: data.user?.user_metadata?.name || email.split("@")[0],
-        role: data.user?.user_metadata?.role
+        role: roleFromDb
       });
-      handleAuthSuccess();
+      handleAuthSuccess(roleFromDb);
     } catch (error: any) {
       alert(error.message);
     }
@@ -170,9 +199,27 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     handleAuthSuccess();
   };
 
-  const handleAuthSuccess = () => {
-    router.replace("/dashboard");
+  const handleAuthSuccess = (nextRole?: string | null) => {
+    const target = nextRole === "admin" ? "/admin" : "/dashboard";
+    router.replace(target);
     onClose();
+  };
+
+  const resolveUserRole = async (userId?: string, token?: string, fallbackRole?: string | null) => {
+    if (!userId || !token) return fallbackRole || "";
+    try {
+      const res = await fetch('/api/auth/role', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (!res.ok) return fallbackRole || "";
+      const data = await res.json();
+      return data?.role || fallbackRole || "";
+    } catch (err) {
+      console.warn("Failed to fetch user role:", err);
+      return fallbackRole || "";
+    }
   };
 
   const handleBack = () => {

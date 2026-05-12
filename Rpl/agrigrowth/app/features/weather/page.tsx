@@ -224,7 +224,7 @@ export default function WeatherInfo() {
 
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
-      <header className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
+      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
         <Link href="/dashboard" className="flex items-center gap-2.5 transition hover:opacity-80">
           <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgBrandLogo} />
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>

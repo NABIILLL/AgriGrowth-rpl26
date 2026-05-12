@@ -8,6 +8,7 @@ import {
   CloudRain,
   CloudSun,
   Droplet,
+  Edit2,
   History,
   Leaf,
   Mail,
@@ -21,6 +22,7 @@ import {
 
 import { useUser } from "@/hooks/useUser";
 import AuthModal from "@/components/AuthModal";
+import ProfileEditor from "@/components/ProfileEditor";
 import { supabase } from "@/lib/supabase";
 import { clearUser } from "@/lib/auth";
 
@@ -83,10 +85,13 @@ const activities = [
 export default function ProfilePage() {
   const { user, isLoading } = useUser();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const displayName = user?.name || defaultProfile.name;
   const displayEmail = user?.email || defaultProfile.email;
-  const displayLocation = defaultProfile.location;
+  const displayPhone = user?.phone || defaultProfile.phone;
+  const displayLocation = user?.location || defaultProfile.location;
+  const displayRole = user?.role || defaultProfile.role;
   const displayInitials = (
     displayName
       .split(" ")
@@ -109,8 +114,9 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <ProfileEditor isOpen={isEditModalOpen} user={user} onClose={() => setIsEditModalOpen(false)} />
 
-      <header className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
+      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
         <div className="flex items-center gap-2.5">
           <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
@@ -169,13 +175,13 @@ export default function ProfilePage() {
               <div>
                 <span className="inline-flex items-center gap-2 rounded-full border border-[#9fcd6a] bg-[rgba(151,196,89,0.18)] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#d8edae]">
                   <Leaf className="h-3.5 w-3.5" aria-hidden="true" />
-                  {defaultProfile.role}
+                  {displayRole || defaultProfile.role}
                 </span>
                 <h2 className="mt-3 text-[28px] font-semibold leading-tight sm:text-[32px]">
                   {displayName}
                 </h2>
                 <p className="mt-1 text-[13px] text-[#d8edae] sm:text-[14px]">
-                  {defaultProfile.subtitle} · {displayLocation}
+                  {user?.bio || defaultProfile.subtitle} · {displayLocation}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {defaultProfile.tags.map((tag) => (
@@ -190,18 +196,27 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="grid w-full grid-cols-2 gap-4 text-center text-white sm:grid-cols-4 lg:ml-auto">
-              {stats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-3 py-4"
-                >
-                  <div className="text-[22px] font-semibold sm:text-[24px]">{stat.value}</div>
-                  <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[#d8edae]">
-                    {stat.label}
+            <div className="flex flex-col gap-3 lg:ml-auto">
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#9fcd6a] px-4 py-2 text-[13px] font-semibold text-[#1f4b1a] transition hover:bg-white"
+              >
+                <Edit2 className="h-4 w-4" aria-hidden="true" />
+                Edit Profil
+              </button>
+              <div className="grid grid-cols-2 gap-4 text-center text-white sm:grid-cols-4">
+                {stats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="rounded-2xl border border-white/10 bg-white/5 px-3 py-4"
+                  >
+                    <div className="text-[22px] font-semibold sm:text-[24px]">{stat.value}</div>
+                    <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[#d8edae]">
+                      {stat.label}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -213,7 +228,7 @@ export default function ProfilePage() {
             </div>
             <div className="mt-5 space-y-3 text-sm">
               <InfoRow icon={Mail} label="Email" value={displayEmail} />
-              <InfoRow icon={Phone} label="Telepon" value={defaultProfile.phone} />
+              <InfoRow icon={Phone} label="Telepon" value={displayPhone} />
               <InfoRow icon={MapPin} label="Lokasi" value={displayLocation} />
               <InfoRow icon={CalendarDays} label="Bergabung" value={defaultProfile.joined} />
             </div>

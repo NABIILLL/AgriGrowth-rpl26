@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getUser, clearUser } from "@/lib/auth";
@@ -54,6 +54,13 @@ export default function Dashboard() {
   const { user, isLoading } = useUser();
   const router = useRouter();
   const displayName = !isLoading && user ? user.name : "Guest";
+
+  // Redirect admins to the admin dashboard
+  useEffect(() => {
+    if (!isLoading && user?.role === "admin") {
+      router.replace("/admin");
+    }
+  }, [user, isLoading, router]);
 
   const handleLogout = async () => {
     try {
@@ -200,7 +207,7 @@ export default function Dashboard() {
     return (
       <main className="min-h-screen bg-[#b8b8b8] text-[#365a1a]">
         <div className="mx-auto min-h-screen w-full max-w-[1440px] bg-white px-5 pb-10 pt-6 sm:px-10 lg:px-14">
-          <header className="flex items-center justify-between gap-4">
+          <header className="relative z-50 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
               <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgResultLogo} />
               <b className="text-[16px] leading-none sm:text-[18px] lg:text-[21px]">Agrigrowth Monitor</b>
@@ -319,7 +326,7 @@ export default function Dashboard() {
   if (showAnalysisForm) {
     return (
       <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
-        <header className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
+        <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
           <div className="flex items-center gap-2.5">
             <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
             <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
@@ -444,7 +451,7 @@ export default function Dashboard() {
 
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
-      <header className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
+      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
         <div className="flex items-center gap-2.5">
           <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>

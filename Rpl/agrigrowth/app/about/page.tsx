@@ -29,7 +29,7 @@ export default function About() {
     <main className="min-h-screen bg-white text-[#365a1a]">
       <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       {/* Header */}
-      <header className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
+      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
         <div className="flex items-center gap-2.5">
           <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>

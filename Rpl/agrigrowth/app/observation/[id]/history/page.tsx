@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import {
@@ -34,8 +35,10 @@ export default function ObservationHistory() {
   const [trackers, setTrackers] = useState<TrackerData[]>([]);
   const [selectedTrackerId, setSelectedTrackerId] = useState<string | null>(null);
   const [chartData, setChartData] = useState<any[]>([]);
+  const [logsRaw, setLogsRaw] = useState<any[]>([]);
   const [trackerTitle, setTrackerTitle] = useState("Tanaman");
   const [loading, setLoading] = useState(true);
+  const [editingLog, setEditingLog] = useState<any | null>(null);
   
   // Analysis stats
   const [stats, setStats] = useState({
@@ -88,9 +91,9 @@ export default function ObservationHistory() {
     fetchTrackers();
   }, [id, user, isLoading, trackerIdFromQuery]);
 
-  // Fetch chart data when tracker is selected
+  // Fetch chart/logs data when tracker is selected
   useEffect(() => {
-    async function fetchChartData() {
+    async function fetchLogs() {
       if (!selectedTrackerId || !user) return;
 
       try {
@@ -102,46 +105,206 @@ export default function ObservationHistory() {
 
         if (error) throw error;
 
-        if (logsData && logsData.length > 0) {
-          const data = logsData.map(log => ({
+        const logs = logsData || [];
+        setLogsRaw(logs);
+
+        if (logs.length > 0) {
+          const data = logs.map((log: any) => ({
             day: `Hari ${log.day_number}`,
             dayNumber: log.day_number,
             height: log.plant_height || 0,
             leaf: log.leaf_count || 0,
           }));
-          
+
           setChartData(data);
-          
-          if (data.length > 0) {
-            const first = data[0];
-            const last = data[data.length - 1];
-            const daysSpan = last.dayNumber - first.dayNumber || 1;
-            
-            const newStats = {
-              startHeight: first.height,
-              endHeight: last.height,
-              startLeaf: first.leaf,
-              endLeaf: last.leaf,
-              daysSpan,
-              avgHeightGrowth: (last.height - first.height) / daysSpan,
-              avgLeafGrowth: (last.leaf - first.leaf) / daysSpan
-            };
-            setStats(newStats);
-          }
+
+          const first = data[0];
+          const last = data[data.length - 1];
+          const daysSpan = last.dayNumber - first.dayNumber || 1;
+
+          const newStats = {
+            startHeight: first.height,
+            endHeight: last.height,
+            startLeaf: first.leaf,
+            endLeaf: last.leaf,
+            daysSpan,
+            avgHeightGrowth: (last.height - first.height) / daysSpan,
+            avgLeafGrowth: (last.leaf - first.leaf) / daysSpan
+          };
+          setStats(newStats);
         } else {
           setChartData([]);
+          setStats({ startHeight: 0, endHeight: 0, startLeaf: 0, endLeaf: 0, daysSpan: 0, avgHeightGrowth: 0, avgLeafGrowth: 0 });
         }
       } catch (error) {
         console.error("Error fetching chart data:", error);
       }
     }
-    fetchChartData();
+    fetchLogs();
   }, [selectedTrackerId, user]);
+
+  // Helper to reload logs (used after edit/delete)
+  async function reloadLogs() {
+    if (!selectedTrackerId || !user) return;
+    try {
+      const { data: logsData, error } = await supabase
+        .from("growth_logs")
+        .select("*")
+        .eq("tracker_id", selectedTrackerId)
+        .order("day_number", { ascending: true });
+
+      if (error) throw error;
+
+      const logs = logsData || [];
+      setLogsRaw(logs);
+
+      if (logs.length > 0) {
+        const data = logs.map((log: any) => ({
+          day: `Hari ${log.day_number}`,
+          dayNumber: log.day_number,
+          height: log.plant_height || 0,
+          leaf: log.leaf_count || 0,
+        }));
+
+        setChartData(data);
+
+        const first = data[0];
+        const last = data[data.length - 1];
+        const daysSpan = last.dayNumber - first.dayNumber || 1;
+
+        const newStats = {
+          startHeight: first.height,
+          endHeight: last.height,
+          startLeaf: first.leaf,
+          endLeaf: last.leaf,
+          daysSpan,
+          avgHeightGrowth: (last.height - first.height) / daysSpan,
+          avgLeafGrowth: (last.leaf - first.leaf) / daysSpan
+        };
+        setStats(newStats);
+      } else {
+        setChartData([]);
+        setStats({ startHeight: 0, endHeight: 0, startLeaf: 0, endLeaf: 0, daysSpan: 0, avgHeightGrowth: 0, avgLeafGrowth: 0 });
+      }
+    } catch (err) {
+      console.error("Error reloading logs:", err);
+      toast.error("Gagal memuat ulang data");
+    }
+  }
+
+  // Delete a log entry
+  async function handleDeleteLog(logId: string) {
+    if (!confirm("Hapus data pengamatan ini? Tindakan ini tidak dapat dibatalkan.")) return;
+    try {
+      // Optimistic UI update: remove locally immediately
+      setLogsRaw((prev) => prev.filter((l) => String(l.id) !== String(logId)));
+
+      // Send delete request. Include tracker_id to match RLS policies if present.
+      const query = supabase.from("growth_logs").delete().eq("id", logId);
+      if (selectedTrackerId) query.eq("tracker_id", selectedTrackerId);
+
+      const { data, error } = await query.select();
+      console.log('delete result', { data, error });
+
+      if (error) {
+        // revert optimistic removal on failure
+        await reloadLogs();
+        console.error("Error deleting log:", error);
+        toast.error(`Gagal menghapus data: ${error.message || "unknown"}`);
+        return;
+      }
+
+      // Success
+      toast.success("Data pengamatan berhasil dihapus");
+      // ensure UI consistent
+      await reloadLogs();
+    } catch (err: any) {
+      console.error("Error deleting log (unexpected):", err);
+      toast.error(`Gagal menghapus data: ${err?.message ?? "unknown"}`);
+      await reloadLogs();
+    }
+  }
+
+  // Update a log entry
+  async function handleUpdateLog(updated: any) {
+    try {
+      const payload: any = {
+        day_number: parseInt(String(updated.day_number)),
+        plant_height: parseFloat(String(updated.plant_height)),
+        leaf_count: parseInt(String(updated.leaf_count)),
+        branch_count: updated.branch_count ? parseInt(String(updated.branch_count)) : 0,
+        soil_ph: parseFloat(String(updated.soil_ph || 7)),
+        light_condition: updated.light_condition || "",
+        plant_condition: updated.plant_condition || "",
+        fertilizer_type: updated.fertilizer_type || "",
+        land_area: updated.land_area ? parseFloat(String(updated.land_area)) : 1,
+      };
+
+      const { error } = await supabase.from("growth_logs").update(payload).eq("id", updated.id);
+      if (error) throw error;
+
+      toast.success("Data pengamatan berhasil diperbarui");
+      setEditingLog(null);
+      await reloadLogs();
+    } catch (err: any) {
+      console.error("Error updating log:", err);
+      toast.error(`Gagal memperbarui data: ${err?.message ?? "unknown"}`);
+    }
+  }
+
+  // Predictions component (simple heuristic)
+  function PredictionsSection({ plantType, avgHeightGrowth, currentHeight, latestLog }: any) {
+    const defaults: any = {
+      padi: { maturityHeight: 100, ratesPerHa: { N: 150, P: 50, K: 50 } },
+      jagung: { maturityHeight: 250, ratesPerHa: { N: 200, P: 60, K: 80 } },
+      bawang: { maturityHeight: 50, ratesPerHa: { N: 120, P: 40, K: 60 } },
+    };
+
+    const key = plantType === "jagung" ? "jagung" : plantType === "bawang" ? "bawang" : "padi";
+    const cfg = defaults[key] || defaults.padi;
+
+    let daysToMaturity: number | null = null;
+    let predictedDate: string | null = null;
+    if (avgHeightGrowth > 0) {
+      daysToMaturity = Math.ceil((cfg.maturityHeight - (currentHeight || 0)) / avgHeightGrowth);
+      if (daysToMaturity < 0) daysToMaturity = 0;
+      const d = new Date();
+      d.setDate(d.getDate() + daysToMaturity);
+      predictedDate = d.toLocaleDateString('id-ID');
+    }
+
+    // land area from latestLog if available (stored in hectares in the form)
+    const landArea = latestLog?.land_area || 1;
+    const fertilizer = Object.fromEntries(Object.entries(cfg.ratesPerHa).map(([k, v]) => [k, ((v as number) * landArea).toFixed(1)]));
+
+    return (
+      <div>
+        <p className="text-sm text-[#365a1a]/80 mb-2">Estimasi sederhana berdasarkan rata-rata pertumbuhan tinggi tanaman.</p>
+        {daysToMaturity === null || !predictedDate ? (
+          <p className="text-sm text-red-600">Belum cukup data untuk memprediksi panen. Tambah minimal dua titik pengamatan dengan nilai tinggi.</p>
+        ) : (
+          <div className="space-y-2">
+            <p className="font-semibold">Perkiraan hari hingga panen: {daysToMaturity} hari</p>
+            <p className="text-sm text-gray-700">Perkiraan tanggal panen: {predictedDate} (estimasi)</p>
+            <div className="mt-3">
+              <h4 className="font-semibold">Rekomendasi pupuk untuk luas lahan {landArea} ha</h4>
+              <ul className="text-sm text-[#365a1a]/80">
+                {Object.entries(fertilizer).map(([nutrient, qty]) => (
+                  <li key={nutrient}>• {nutrient}: {qty} kg</li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-gray-500">Catatan: Angka di atas adalah estimasi dasar. Sesuaikan dengan kondisi lapang dan rekomendasi teknis setempat.</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       {/* Header */}
-      <header className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
+      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
         <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2.5 hover:opacity-80 transition">
           <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
@@ -324,6 +487,36 @@ export default function ObservationHistory() {
                 </div>
               </div>
 
+                {/* Prediksi Panen & Rekomendasi Pupuk */}
+                <div className="rounded-[20px] border-2 border-[#365a1a] bg-white p-6 shadow-sm">
+                  <h2 className="mb-4 text-[20px] font-bold sm:text-[24px]">🔮 Prediksi Panen & Rekomendasi Pupuk</h2>
+                  <PredictionsSection
+                    plantType={id}
+                    avgHeightGrowth={stats.avgHeightGrowth}
+                    currentHeight={stats.endHeight}
+                    latestLog={logsRaw.length ? logsRaw[logsRaw.length - 1] : null}
+                  />
+                </div>
+
+                {/* Logs list with edit/delete */}
+                <div className="rounded-[20px] border-2 border-[#365a1a] bg-white p-6 shadow-sm">
+                  <h2 className="mb-4 text-[20px] font-bold sm:text-[24px]">📝 Daftar Pengamatan (Edit / Hapus)</h2>
+                  <div className="space-y-3">
+                    {logsRaw.map((log) => (
+                      <div key={log.id} className="flex items-center justify-between rounded-md border p-3">
+                        <div>
+                          <div className="font-semibold text-[#365a1a]">Hari {log.day_number} — {log.plant_height} cm • {log.leaf_count} daun</div>
+                          <div className="text-sm text-gray-600">pH: {log.soil_ph} • Pupuk: {log.fertilizer_type} • Luas: {log.land_area} ha</div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => setEditingLog(log)} className="rounded bg-[#365a1a] text-white px-3 py-1 text-sm">Edit</button>
+                          <button onClick={() => handleDeleteLog(log.id)} className="rounded bg-white border border-red-400 text-red-600 px-3 py-1 text-sm">Hapus</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center rounded-[30px] border-2 border-dashed border-[#9fb08d] bg-white py-24 px-6 text-center">
@@ -343,6 +536,49 @@ export default function ObservationHistory() {
             </div>
           )}
         </div>
+
+        {/* Edit modal */}
+        {editingLog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="w-full max-w-xl rounded-lg bg-white p-6">
+              <h3 className="text-lg font-bold text-[#365a1a] mb-4">Edit Pengamatan - Hari {editingLog.day_number}</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-semibold">Hari ke-</label>
+                  <input type="number" name="day_number" value={editingLog.day_number} onChange={(e) => setEditingLog({...editingLog, day_number: e.target.value})} className="w-full rounded border px-3 py-2" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Tinggi (cm)</label>
+                  <input type="number" step="0.1" name="plant_height" value={editingLog.plant_height} onChange={(e) => setEditingLog({...editingLog, plant_height: e.target.value})} className="w-full rounded border px-3 py-2" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Jumlah Daun</label>
+                  <input type="number" name="leaf_count" value={editingLog.leaf_count} onChange={(e) => setEditingLog({...editingLog, leaf_count: e.target.value})} className="w-full rounded border px-3 py-2" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Jumlah Cabang</label>
+                  <input type="number" name="branch_count" value={editingLog.branch_count} onChange={(e) => setEditingLog({...editingLog, branch_count: e.target.value})} className="w-full rounded border px-3 py-2" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">pH Tanah</label>
+                  <input type="number" step="0.1" name="soil_ph" value={editingLog.soil_ph} onChange={(e) => setEditingLog({...editingLog, soil_ph: e.target.value})} className="w-full rounded border px-3 py-2" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Jenis Pupuk</label>
+                  <input type="text" name="fertilizer_type" value={editingLog.fertilizer_type} onChange={(e) => setEditingLog({...editingLog, fertilizer_type: e.target.value})} className="w-full rounded border px-3 py-2" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Luas Lahan (ha)</label>
+                  <input type="number" step="0.1" name="land_area" value={editingLog.land_area} onChange={(e) => setEditingLog({...editingLog, land_area: e.target.value})} className="w-full rounded border px-3 py-2" />
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end gap-3">
+                <button onClick={() => setEditingLog(null)} className="rounded border px-4 py-2">Batal</button>
+                <button onClick={() => handleUpdateLog(editingLog)} className="rounded bg-[#365a1a] px-4 py-2 text-white">Simpan</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Back Button */}
         <Link

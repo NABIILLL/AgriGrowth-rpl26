@@ -23,10 +23,26 @@ export default function AuthCallback() {
           if (error) throw error;
         }
 
-        // Tunggu sebentar agar hook useUser (onAuthStateChange) memproses event SIGNED_IN
-        setTimeout(() => {
-          router.replace("/dashboard");
-        }, 500);
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+
+        if (userId) {
+          const { data, error } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          if (error) {
+            console.error("Error fetching user role:", error);
+          }
+
+          const target = data?.role === "admin" ? "/admin" : "/dashboard";
+          router.replace(target);
+          return;
+        }
+
+        router.replace("/dashboard");
         
       } catch (err: any) {
         console.error("Auth callback error:", err);

@@ -15,6 +15,7 @@ const navItems = ["Home", "About", "Features"];
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
   const { user, isLoading } = useUser();
   const router = useRouter();
 
@@ -48,13 +49,18 @@ export default function Home() {
     if (user) {
       router.push("/dashboard");
     } else {
+      setAuthMode("signup");
       setIsModalOpen(true);
     }
   };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#081018] text-white">
-      <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AuthModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        initialMode={authMode}
+      />
       <div
         aria-hidden
         className="absolute inset-0"
@@ -66,7 +72,16 @@ export default function Home() {
       />
 
       <div className="relative mx-auto flex w-full max-w-[1440px] flex-col px-5 pb-10 pt-6 sm:px-10 lg:px-12 lg:pt-8">
-        <HeaderWithModal onSignUpClick={() => setIsModalOpen(true)} />
+        <HeaderWithModal
+          onSignUpClick={() => {
+            setAuthMode("signup");
+            setIsModalOpen(true);
+          }}
+          onSignInClick={() => {
+            setAuthMode("login");
+            setIsModalOpen(true);
+          }}
+        />
 
         <section className="mt-20 w-full max-w-[860px] sm:mt-32 lg:mt-56">
           <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-white sm:text-6xl lg:text-7xl">
@@ -83,7 +98,7 @@ export default function Home() {
 
           <button
             onClick={handleGetStarted}
-            className="mt-10 inline-flex items-center gap-3 rounded-full bg-white px-6 py-3 text-base font-semibold text-black shadow-lg transition duration-200 hover:bg-gray-100 hover:shadow-xl sm:gap-4 sm:px-8 sm:py-4 sm:text-lg"
+            className="mt-10 inline-flex items-center gap-3 rounded-full bg-white/75 px-6 py-3 text-base font-semibold text-black shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition duration-200 hover:bg-white/90 sm:gap-4 sm:px-8 sm:py-4 sm:text-lg"
             type="button"
           >
             <span>Get Started</span>

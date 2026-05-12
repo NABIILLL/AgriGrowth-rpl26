@@ -10,9 +10,10 @@ const logoMark = "https://www.figma.com/api/mcp/asset/eb8b6bb8-e06c-41c9-9ec8-8a
 
 interface HeaderWithModalProps {
   onSignUpClick: () => void;
+  onSignInClick?: () => void;
 }
 
-export default function HeaderWithModal({ onSignUpClick }: HeaderWithModalProps) {
+export default function HeaderWithModal({ onSignUpClick, onSignInClick }: HeaderWithModalProps) {
   const { user, isLoading } = useUser();
 
   const handleLogout = async () => {
@@ -58,13 +59,21 @@ export default function HeaderWithModal({ onSignUpClick }: HeaderWithModalProps)
               </button>
             </div>
           ) : (
-            <button
-              onClick={onSignUpClick}
-              className="inline-flex items-center gap-3 rounded-full bg-[rgba(53,90,26,0.9)] px-4 py-2 shadow-md hover:bg-[rgba(53,90,26,1)] transition text-white"
-            >
-              <span className="text-lg font-medium">Sign Up</span>
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 font-bold">›</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onSignInClick || onSignUpClick}
+                className="text-sm font-semibold text-white/85 hover:text-white transition"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={onSignUpClick}
+                className="inline-flex items-center gap-3 rounded-full bg-[rgba(54,90,26,0.75)] px-4 py-2 shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] hover:bg-[rgba(54,90,26,0.9)] transition text-white"
+              >
+                <span className="text-lg font-medium">Sign Up</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 font-bold text-black">›</span>
+              </button>
+            </div>
           )
         )}
       </div>
