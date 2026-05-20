@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import HeaderWithModal from "@/components/HeaderWithModal";
 import AuthModal from "@/components/AuthModal";
 import { useUser } from "@/hooks/useUser";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -17,12 +17,12 @@ const staggerContainer = {
   }
 };
 
-const fadeUpVariant = {
+const fadeUpVariant: Variants = {
   hidden: { opacity: 0, y: 30 },
   show: { 
     opacity: 1, 
     y: 0,
-    transition: { type: "spring", stiffness: 70, damping: 15 }
+    transition: { type: "spring", stiffness: 70, damping: 15 } as const
   }
 };
 
