@@ -5,7 +5,7 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { useUser } from "@/hooks/useUser";
-import AuthModal from "@/components/AuthModal";
+import { useClerk } from "@clerk/nextjs";
 import { motion, Variants } from "framer-motion";
 
 const staggerContainer: Variants = {
@@ -56,13 +56,12 @@ const featureCards = [
 
 export default function Wireframe4() {
 	const { user, isLoading } = useUser();
-	const [isModalOpen, setIsModalOpen] = useState(false);
+	const { openSignIn } = useClerk();
 	const [mobileOpen, setMobileOpen] = useState(false);
   const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
 
 	return (
 		<main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
-			<AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 			<header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
 				<div className="flex items-center gap-2.5">
 					<img alt="Agrigrowth logo" loading="lazy" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
@@ -95,7 +94,7 @@ export default function Wireframe4() {
 							</div>
 						) : (
 							<button 
-								onClick={() => setIsModalOpen(true)} 
+								onClick={() => openSignIn()} 
 								className="hidden sm:block rounded-full bg-[#365a1a] px-5 py-2 text-[16px] font-medium text-white shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] sm:text-[18px] hover:bg-[#2d4915] transition"
 							>
 								Login / Sign Up
@@ -136,7 +135,7 @@ export default function Wireframe4() {
 									<button
 										onClick={() => {
 											setMobileOpen(false);
-											setIsModalOpen(true);
+											openSignIn();
 										}}
 										className="w-full rounded-full bg-[#365a1a] px-3 py-2 text-sm font-medium text-white hover:bg-[#2d4915] transition"
 									>
@@ -165,14 +164,14 @@ export default function Wireframe4() {
 							onClick={(e: React.MouseEvent) => {
 								if (!user) {
 									e.preventDefault();
-									setIsModalOpen(true);
+									openSignIn();
 								}
 							}}
 						>
 							<Link href={user ? links[index] : "#"} className="block" onClick={(e) => {
 								if (!user) {
 									e.preventDefault();
-									setIsModalOpen(true);
+									openSignIn();
 								}
 							}}>
 								<div className="flex flex-col gap-5 md:flex-row md:items-center md:gap-8">

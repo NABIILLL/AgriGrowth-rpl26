@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import HeaderWithModal from "@/components/HeaderWithModal";
 import { motion, Variants } from "framer-motion";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useClerk } from "@clerk/nextjs";
 
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
@@ -30,21 +30,14 @@ const heroBackground =
 
 export default function Home() {
   const { isSignedIn } = useAuth();
+  const { openSignIn } = useClerk();
   const router = useRouter();
 
   const handleGetStarted = () => {
     if (isSignedIn) {
       router.push("/dashboard");
     } else {
-      // With Clerk, we can redirect to sign in or just prompt them to click Sign In on the header
-      // Clerk's modal is triggered by the header buttons, but for this button we can redirect
-      // or we can use Clerk's SignedIn/SignedOut components. We'll just push to sign-in for now
-      // Actually, since they might want the modal, the easiest way is to let Clerk handle it, 
-      // but without the `SignInButton` wrapping here, it's easier to just redirect to /sign-in
-      // which Clerk intercepts if we don't have it. Or better, we can wrap the button in SignInButton.
-      // But for simplicity, we just trigger a click on the header's Sign Up button!
-      const signUpBtn = document.querySelector('header button, .bg-\\[\\#365a1a\\]') as HTMLButtonElement;
-      if (signUpBtn) signUpBtn.click();
+      openSignIn();
     }
   };
 

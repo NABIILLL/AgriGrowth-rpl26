@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 import { useUser } from "@/hooks/useUser";
-import AuthModal from "@/components/AuthModal";
+import { useClerk } from "@clerk/nextjs";
 import ProfileEditor from "@/components/ProfileEditor";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { motion } from "framer-motion";
@@ -103,7 +103,7 @@ const activities = [
 
 export default function ProfilePage() {
   const { user, isLoading } = useUser();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { openSignIn } = useClerk();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const displayName = user?.name || defaultProfile.name;
@@ -123,7 +123,6 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
-      <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       <ProfileEditor
         key={isEditModalOpen ? `profile-editor-open-${user?.id || "guest"}` : `profile-editor-closed-${user?.id || "guest"}`}
         isOpen={isEditModalOpen}
@@ -168,7 +167,7 @@ export default function ProfilePage() {
             </div>
           ) : (
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => openSignIn()}
               className="rounded-full bg-[#365a1a] px-5 py-2 text-[16px] font-medium text-white shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:bg-[#2d4915] sm:text-[18px]"
             >
               Login / Sign Up

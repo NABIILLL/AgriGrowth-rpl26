@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { clearUser } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
+import { useClerk } from "@clerk/nextjs";
 
 const clearSupabaseBrowserSession = () => {
   Object.keys(window.localStorage).forEach((key) => {
@@ -20,18 +20,17 @@ const clearSupabaseBrowserSession = () => {
 
 export function useLogoutConfirm() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { signOut } = useClerk();
 
   const performLogout = async () => {
     setIsLoggingOut(true);
     try {
       clearUser();
-      await supabase.auth.signOut({ scope: "local" });
+      clearSupabaseBrowserSession();
+      await signOut({ redirectUrl: "/" });
     } catch (error) {
       console.error("Failed to logout:", error);
-    } finally {
-      clearUser();
-      clearSupabaseBrowserSession();
-      window.location.replace("/");
+      setIsLoggingOut(false);
     }
   };
 

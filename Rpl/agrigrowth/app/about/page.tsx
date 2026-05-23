@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
-import AuthModal from "@/components/AuthModal";
+import { useClerk } from "@clerk/nextjs";
 import { useState } from "react";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import AgrigrowthLogo from "../../components/AgrigrowthLogo";
@@ -32,13 +32,12 @@ const imgProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%233
 
 export default function About() {
   const { user, isLoading } = useUser();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { openSignIn } = useClerk();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
 
   return (
     <main className="min-h-screen bg-white text-[#365a1a]">
-      <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       {/* Header */}
       <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-2 sm:gap-4 px-5 py-4 sm:py-6 sm:px-10 lg:px-14">
         <AgrigrowthLogo
@@ -74,7 +73,7 @@ export default function About() {
                 </button>
               </div>
             ) : (
-              <button onClick={() => setIsModalOpen(true)} className="hidden sm:block rounded-full bg-[#365a1a] px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm md:text-base font-medium text-white shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] hover:bg-[#2d4915] transition">
+              <button onClick={() => openSignIn()} className="hidden sm:block rounded-full bg-[#365a1a] px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm md:text-base font-medium text-white shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] hover:bg-[#2d4915] transition">
                 Login / Sign Up
               </button>
             )
@@ -113,7 +112,7 @@ export default function About() {
                   <button
                     onClick={() => {
                       setMobileOpen(false);
-                      setIsModalOpen(true);
+                      openSignIn();
                     }}
                     className="w-full rounded-full bg-[#365a1a] px-3 py-2 text-sm font-medium text-white hover:bg-[#2d4915] transition"
                   >
