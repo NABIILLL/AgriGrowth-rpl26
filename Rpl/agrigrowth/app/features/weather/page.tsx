@@ -19,6 +19,7 @@ import { useWeather } from "@/hooks/useWeather";
 import { useUser } from "@/hooks/useUser";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { getWeatherDescription } from "@/lib/weather";
+import { UserButton } from "@clerk/nextjs";
 
 const imgRainHero = "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?q=80&w=2000&auto=format&fit=crop";
 const imgBrandLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
@@ -232,7 +233,7 @@ export default function WeatherInfo() {
 
         {!isLoading ? (
           user ? (
-            <div className="flex items-center gap-4"><UserButton showName={true} afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
+            <div className="flex items-center gap-4"><UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
           ) : (
             <div className="flex items-center gap-3">
               <Link href="/auth" className="text-sm font-semibold text-[#365a1a]">Login / Sign Up</Link>

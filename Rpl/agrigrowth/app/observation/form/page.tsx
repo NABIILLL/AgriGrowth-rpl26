@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown, Calendar, ThermometerSun, Leaf, Ruler, Scale } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { useUser } from "@/hooks/useUser";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { toast } from "react-hot-toast";
+import { UserButton } from "@clerk/nextjs";
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -18,9 +19,9 @@ const staggerContainer = {
   }
 };
 
-const fadeUpVariant = {
+const fadeUpVariant: Variants = {
   hidden: { opacity: 0, y: 30 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 70, damping: 15 } }
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 70, damping: 15 } as const }
 };
 
 const imgLogo = "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=800&auto=format&fit=crop";
@@ -276,7 +277,9 @@ export default function ObservationForm() {
             Features
           </Link>
         </nav>
-        <div className="flex items-center gap-4"><UserButton showName={true} afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
+        <div className="flex items-center gap-4">
+          <UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} />
+        </div>
       </header>
 
       {/* Content */}

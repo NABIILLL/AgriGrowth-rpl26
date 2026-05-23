@@ -5,7 +5,7 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { useUser } from "@/hooks/useUser";
-import { useClerk } from "@clerk/nextjs";
+import { useClerk, UserButton } from "@clerk/nextjs";
 import { motion, Variants } from "framer-motion";
 
 const staggerContainer: Variants = {
@@ -78,19 +78,7 @@ export default function Wireframe4() {
 					{!isLoading && (
 						user ? (
 							<div className="hidden sm:flex items-center gap-4">
-								<Link
-									href="/profile"
-									className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
-								>
-									<span>{user.name}</span>
-									<img alt="Profile" loading="lazy" className="h-8 w-8 object-contain" src={imgProfile} />
-								</Link>
-								<button 
-									onClick={handleLogout}
-									className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition"
-								>
-	                {isLoggingOut ? "Keluar..." : "Logout"}
-	              </button>
+								<UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} />
 							</div>
 						) : (
 							<button 
@@ -125,11 +113,7 @@ export default function Wireframe4() {
 							{!isLoading ? (
 								user ? (
 									<div className="flex flex-col gap-2">
-										<Link onClick={() => setMobileOpen(false)} href="/profile" className="flex items-center gap-2 rounded-md px-3 py-2 bg-[rgba(54,90,26,0.9)] text-white">
-											<img alt="Profile" loading="lazy" className="h-5 w-5 object-contain" src={imgProfile} />
-											<span className="font-medium">{user.name}</span>
-										</Link>
-										<button onClick={() => { setMobileOpen(false); handleLogout(); }} className="text-left text-sm font-semibold text-[#365a1a]">{isLoggingOut ? 'Keluar...' : 'Logout'}</button>
+										<UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} />
 									</div>
 								) : (
 									<button
@@ -162,6 +146,10 @@ export default function Wireframe4() {
 							key={feature.title}
 							className="rounded-[30px] bg-white p-5 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.2),-6px_6px_15px_0px_rgba(0,0,0,0.2)] sm:p-6 group cursor-pointer hover:shadow-[6px_-6px_25px_0px_rgba(0,0,0,0.3),-6px_6px_25px_0px_rgba(0,0,0,0.3)] transition"
 							onClick={(e: React.MouseEvent) => {
+								if (isLoading) {
+									e.preventDefault();
+									return;
+								}
 								if (!user) {
 									e.preventDefault();
 									openSignIn();
@@ -169,6 +157,10 @@ export default function Wireframe4() {
 							}}
 						>
 							<Link href={user ? links[index] : "#"} className="block" onClick={(e) => {
+								if (isLoading) {
+									e.preventDefault();
+									return;
+								}
 								if (!user) {
 									e.preventDefault();
 									openSignIn();

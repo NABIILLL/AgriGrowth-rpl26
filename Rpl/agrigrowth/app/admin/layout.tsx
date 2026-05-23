@@ -7,6 +7,7 @@ import { useUser } from "@/hooks/useUser";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import AgrigrowthLogo from "@/components/AgrigrowthLogo";
 import { Menu, X } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 import "./admin.css";
 
 const navSections = [
@@ -116,30 +117,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           ))}
 
-          <div className="sidebar-footer">
-            <div className="admin-chip">
-              <div className="admin-avatar">{adminInitials}</div>
-              <div className="admin-info">
-                <div className="admin-name">{adminName}</div>
-                <div className="admin-role">Full Access · Online</div>
-              </div>
-            </div>
-            <div className="admin-footer-actions">
-              <Link href="/admin/profile" className="admin-footer-btn" title="Profil admin">
-                <i className="ti ti-user-circle"></i>
-                Profil
-              </Link>
-              <button
-                type="button"
-                className="admin-footer-btn danger"
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                title="Logout"
-              >
-                <i className="ti ti-logout"></i>
-                {isLoggingOut ? "Keluar..." : "Logout"}
-              </button>
-            </div>
+          <div className="sidebar-footer" style={{ display: 'flex', padding: '24px 28px', borderTop: '1px solid var(--border)', background: 'var(--bg2)', alignItems: 'center', justifyContent: 'center' }}>
+            <UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} />
           </div>
         </aside>
 

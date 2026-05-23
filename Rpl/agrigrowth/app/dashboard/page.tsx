@@ -250,7 +250,7 @@ export default function Dashboard() {
               </Link>
             </nav>
 
-            <div className="flex items-center gap-4"><UserButton showName={true} afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
+            <div className="flex items-center gap-4"><UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
           </header>
 
           <h1 className="mt-6 text-center text-[32px] font-extrabold leading-tight sm:text-[40px] lg:text-[56px]">
@@ -355,7 +355,7 @@ export default function Dashboard() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-4"><UserButton showName={true} afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
+          <div className="flex items-center gap-4"><UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
         </header>
 
         <section className="mx-auto w-full max-w-[1440px] px-5 pb-12 sm:px-10 lg:px-14">
@@ -466,7 +466,7 @@ export default function Dashboard() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-4"><UserButton showName={true} afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
+        <div className="flex items-center gap-4"><UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
       </header>
 
       <motion.section 

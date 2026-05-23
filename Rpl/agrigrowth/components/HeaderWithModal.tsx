@@ -30,7 +30,6 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
           <div className="hidden lg:flex items-center gap-3">
             {isLoaded && isSignedIn && (
               <UserButton 
-                afterSignOutUrl="/"
                 appearance={{
                   elements: {
                     userButtonAvatarBox: "w-10 h-10 shadow-md",
@@ -77,7 +76,7 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
             <div className="mt-3 border-t border-white/10 pt-3">
               {isLoaded && isSignedIn && (
                 <div className="flex flex-col gap-2 mt-2 items-start">
-                  <UserButton afterSignOutUrl="/" showName={true} />
+                  <UserButton showName={true} />
                 </div>
               )}
               {isLoaded && !isSignedIn && (

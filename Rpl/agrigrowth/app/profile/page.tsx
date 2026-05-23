@@ -21,12 +21,12 @@ import {
 } from "lucide-react";
 
 import { useUser } from "@/hooks/useUser";
-import { useClerk } from "@clerk/nextjs";
+import { useClerk, UserButton } from "@clerk/nextjs";
 import ProfileEditor from "@/components/ProfileEditor";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -36,12 +36,12 @@ const staggerContainer = {
   }
 };
 
-const fadeUpVariant = {
+const fadeUpVariant: Variants = {
   hidden: { opacity: 0, y: 30 },
   show: { 
     opacity: 1, 
     y: 0,
-    transition: { type: "spring", stiffness: 70, damping: 15 }
+    transition: { type: "spring", stiffness: 70, damping: 15 } as const
   }
 };
 
@@ -151,19 +151,7 @@ export default function ProfilePage() {
         {!isLoading && (
           user ? (
             <div className="flex items-center gap-4 min-h-[48px]">
-              <Link
-                href="/profile"
-                className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
-              >
-                <span>{user.name}</span>
-                <img alt="Profile" className="h-8 w-8 object-contain" src={imgProfile} />
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="text-sm font-bold text-[#365a1a] transition hover:opacity-80"
-              >
-                {isLoggingOut ? "Keluar..." : "Logout"}
-              </button>
+              <UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} />
             </div>
           ) : (
             <button

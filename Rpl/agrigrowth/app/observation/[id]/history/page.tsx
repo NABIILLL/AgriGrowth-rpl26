@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
+import { UserButton } from "@clerk/nextjs";
 import {
   LineChart,
   Line,
@@ -18,9 +19,9 @@ import {
 } from "recharts";
 import { jsPDF } from "jspdf";
 import * as htmlToImage from "html-to-image";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -30,12 +31,12 @@ const staggerContainer = {
   }
 };
 
-const fadeUpVariant = {
+const fadeUpVariant: Variants = {
   hidden: { opacity: 0, y: 30 },
   show: { 
     opacity: 1, 
     y: 0,
-    transition: { type: "spring", stiffness: 70, damping: 15 }
+    transition: { type: "spring", stiffness: 70, damping: 15 } as const
   }
 };
 
@@ -510,7 +511,7 @@ export default function ObservationHistory() {
         </nav>
 
         {!isLoading && user ? (
-          <div className="flex items-center gap-4"><UserButton showName={true} afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
+          <div className="flex items-center gap-4"><UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
         ) : null}
       </header>
 
