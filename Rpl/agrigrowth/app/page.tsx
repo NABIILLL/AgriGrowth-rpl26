@@ -53,11 +53,12 @@ export default function Home() {
         }}
       />
 
-      <div className="relative mx-auto flex w-full max-w-[1440px] flex-col px-5 pb-10 pt-6 sm:px-10 lg:px-12 lg:pt-8">
-        <HeaderWithModal
-          onSignUpClick={() => {}}
-          onSignInClick={() => {}}
-        />
+      <HeaderWithModal
+        onSignUpClick={() => {}}
+        onSignInClick={() => {}}
+      />
+
+      <div className="relative mx-auto flex w-full max-w-[1440px] flex-col px-5 pb-10 sm:px-10 lg:px-14 lg:pt-8">
 
         <motion.section 
           variants={staggerContainer}

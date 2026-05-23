@@ -17,16 +17,16 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
 
   return (
     <>
-      <div className="absolute inset-x-4 top-4 z-10 mx-auto flex max-w-[1280px] items-center justify-between px-2">
+      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
         <AgrigrowthLogo />
 
-        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 lg:flex opacity-90">
-          <Link className="text-lg font-semibold text-white/90 hover:text-white transition" href="/">Home</Link>
-          <Link className="text-lg font-semibold text-white/90 hover:text-white transition" href="/about">About</Link>
-          <Link className="text-lg font-semibold text-white/90 hover:text-white transition" href="/wireframe4">Features</Link>
+        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex opacity-90">
+          <Link className="text-white/90 hover:text-white transition" href="/">Home</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/about">About</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/wireframe4">Features</Link>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-h-[48px]">
           <div className="hidden lg:flex items-center gap-3">
             {isLoaded && isSignedIn && (
               <UserButton 
@@ -93,7 +93,7 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
             </div>
           </div>
         )}
-      </div>
+      </header>
     </>
   );
 }

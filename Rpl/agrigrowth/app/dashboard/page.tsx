@@ -237,7 +237,7 @@ export default function Dashboard() {
               <b className="text-[16px] leading-none sm:text-[18px] lg:text-[21px]">Agrigrowth Monitor</b>
             </div>
 
-            <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-10 text-[16px] font-bold lg:flex xl:text-[21px]">
+            <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
               <Link href="/dashboard" className="transition hover:opacity-80">
                 Home
               </Link>
@@ -357,7 +357,7 @@ export default function Dashboard() {
             <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
           </div>
 
-          <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-10 text-[21px] font-bold lg:flex">
+          <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
             <Link href="/dashboard" className="border-b-2 border-[#365a1a]">
               Home
             </Link>
@@ -483,7 +483,7 @@ export default function Dashboard() {
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
         </div>
 
-        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-10 text-[21px] font-bold lg:flex">
+        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
           <Link href="/dashboard" className="border-b-2 border-[#365a1a]">
             Home
           </Link>

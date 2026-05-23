@@ -68,13 +68,13 @@ export default function Wireframe4() {
 					<b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
 				</div>
 
-				<nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-10 text-[21px] font-bold lg:flex">
+				<nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
 					<Link href={user ? "/dashboard" : "/"} className="hover:opacity-80 transition">Home</Link>
 					<Link href="/about" className="hover:opacity-80 transition">About</Link>
 					<Link href="/wireframe4" className="border-b-2 border-[#365a1a]">Features</Link>
 				</nav>
 
-				<div className="flex items-center gap-3">
+				<div className="flex items-center gap-4 min-h-[48px]">
 					{!isLoading && (
 						user ? (
 							<div className="hidden sm:flex items-center gap-4">

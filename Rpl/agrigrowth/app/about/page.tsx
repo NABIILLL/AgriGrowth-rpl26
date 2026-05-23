@@ -45,7 +45,7 @@ export default function About() {
           textClassName="text-[20px] font-bold leading-none text-[#365a1a] sm:text-[21px]"
         />
 
-        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-4 sm:gap-6 md:gap-10 text-sm sm:text-base md:text-lg font-bold lg:flex">
+        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
           <Link href={user ? "/dashboard" : "/"} className="transition hover:opacity-80">
             Home
           </Link>
@@ -57,7 +57,7 @@ export default function About() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-h-[48px]">
           {!isLoading && (
             user ? (
               <div className="hidden sm:flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4">

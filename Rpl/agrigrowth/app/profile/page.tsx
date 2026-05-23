@@ -136,7 +136,7 @@ export default function ProfilePage() {
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
         </div>
 
-        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-10 text-[21px] font-bold lg:flex">
+        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
           <Link href={user ? "/dashboard" : "/"} className="transition hover:opacity-80">
             Home
           </Link>
@@ -150,7 +150,7 @@ export default function ProfilePage() {
 
         {!isLoading && (
           user ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 min-h-[48px]">
               <Link
                 href="/profile"
                 className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
