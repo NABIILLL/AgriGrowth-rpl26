@@ -8,6 +8,7 @@ import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 import { motion, Variants } from "framer-motion";
+import { UserButton } from "@clerk/nextjs";
 
 // Animation variants
 const staggerContainer: Variants = {
@@ -249,22 +250,7 @@ export default function Dashboard() {
               </Link>
             </nav>
 
-            <div className="flex items-center gap-4">
-              <Link
-                href="/profile"
-                className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[14px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[16px] lg:text-[18px]"
-              >
-                <span>{displayName}</span>
-                <img alt="Profile" loading="lazy" className="h-8 w-8 object-contain" src={imgResultProfile} />
-              </Link>
-              <button
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition"
-              >
-                {isLoggingOut ? "Keluar..." : "Logout"}
-              </button>
-            </div>
+            <div className="flex items-center gap-4"><UserButton showName={true} afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
           </header>
 
           <h1 className="mt-6 text-center text-[32px] font-extrabold leading-tight sm:text-[40px] lg:text-[56px]">
@@ -369,22 +355,7 @@ export default function Dashboard() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-4">
-            <Link
-              href="/profile"
-              className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
-            >
-              <span>{displayName}</span>
-                <img alt="Profile" loading="lazy" className="h-8 w-8 object-contain" src={imgProfile} />
-            </Link>
-            <button
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition"
-            >
-                {isLoggingOut ? "Keluar..." : "Logout"}
-              </button>
-          </div>
+          <div className="flex items-center gap-4"><UserButton showName={true} afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
         </header>
 
         <section className="mx-auto w-full max-w-[1440px] px-5 pb-12 sm:px-10 lg:px-14">
@@ -495,22 +466,7 @@ export default function Dashboard() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-4">
-          <Link
-            href="/profile"
-            className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
-          >
-            <span>{displayName}</span>
-            <img alt="Profile" loading="lazy" className="h-8 w-8 object-contain" src={imgProfile} />
-          </Link>
-          <button
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition"
-          >
-                {isLoggingOut ? "Keluar..." : "Logout"}
-              </button>
-        </div>
+        <div className="flex items-center gap-4"><UserButton showName={true} afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
       </header>
 
       <motion.section 

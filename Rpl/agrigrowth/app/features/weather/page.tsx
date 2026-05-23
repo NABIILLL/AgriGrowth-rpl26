@@ -232,23 +232,7 @@ export default function WeatherInfo() {
 
         {!isLoading ? (
           user ? (
-            <div className="flex items-center gap-4">
-              <Link
-                href="/profile"
-                className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
-              >
-                <span className="hidden sm:inline">{user?.name || "Profile"}</span>
-                <img alt="Profile" className="h-8 w-8 rounded-full object-contain" src={imgProfileAvatar} />
-              </Link>
-
-              <button
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition"
-              >
-                {isLoggingOut ? "Keluar..." : "Logout"}
-              </button>
-            </div>
+            <div className="flex items-center gap-4"><UserButton showName={true} afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
           ) : (
             <div className="flex items-center gap-3">
               <Link href="/auth" className="text-sm font-semibold text-[#365a1a]">Login / Sign Up</Link>

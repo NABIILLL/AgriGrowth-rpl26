@@ -5,6 +5,7 @@ import { useUser } from "@/hooks/useUser";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
+import { UserButton } from "@clerk/nextjs";
 
 const staggerContainer = {
   hidden: { opacity: 0 },
@@ -36,7 +37,7 @@ export default function GrowthTracker() {
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
         </Link>
 
-        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-10 text-[21px] font-bold lg:flex">
+        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
           <Link href="/dashboard" className="hover:opacity-80 transition">
             Home
           </Link>
@@ -50,21 +51,7 @@ export default function GrowthTracker() {
 
         {!isLoading && (
           user ? (
-            <div className="flex items-center gap-4">
-              <Link
-                href="/profile"
-                className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
-              >
-                <span>{user.name}</span>
-                <img alt="Profile" className="h-8 w-8 object-contain" src={imgProfile} />
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition"
-              >
-                {isLoggingOut ? "Keluar..." : "Logout"}
-              </button>
-            </div>
+            <div className="flex items-center gap-4"><UserButton showName={true} afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
           ) : (
             <Link
               href="/"
