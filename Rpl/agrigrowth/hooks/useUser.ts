@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { RealtimeChannel, Session, User as SupabaseUser } from '@supabase/supabase-js';
-import type { supabase as supabaseInstance } from '@/lib/supabase';
+import { useUser as useClerkUser, useSession as useClerkSession } from '@clerk/nextjs';
+import { createClerkSupabaseClient } from '@/lib/supabaseClient';
 
 export interface UserProfile {
   id: string;
@@ -16,279 +16,90 @@ export interface UserProfile {
   updated_at?: string;
 }
 
-type SupabaseBrowserClient = typeof supabaseInstance;
-type ProfileRow = Partial<UserProfile>;
-
-const isUserProfile = (value: unknown): value is UserProfile => {
-  return Boolean(value && typeof value === 'object' && 'id' in value && 'name' in value);
-};
-
-const readStoredUser = () => {
-  if (typeof window === 'undefined') return null;
-
-  const storedUser = localStorage.getItem('user');
-  if (!storedUser) return null;
-
-  try {
-    const parsed = JSON.parse(storedUser) as unknown;
-    return isUserProfile(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-};
-
-const resolveUserName = (sessionUser: Pick<SupabaseUser, 'email' | 'user_metadata'>) => {
-  const metadata = sessionUser?.user_metadata || {};
-  return (
-    metadata.name ||
-    metadata.full_name ||
-    metadata.preferred_username ||
-    sessionUser?.email?.split('@')[0] ||
-    'User'
-  );
-};
-
 export function useUser() {
+  const { user: clerkUser, isLoaded: isClerkUserLoaded } = useClerkUser();
+  const { session, isLoaded: isSessionLoaded } = useClerkSession();
+  
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
-    let channel: RealtimeChannel | null = null;
-    let authSubscription: { unsubscribe: () => void } | null = null;
-    let supabaseClient: SupabaseBrowserClient | null = null;
-    const channelInstanceId = Math.random().toString(36).slice(2);
 
-    queueMicrotask(() => {
-      if (mounted) {
-        setUser(readStoredUser());
+    async function syncSupabaseProfile() {
+      // Tunggu hingga Clerk selesai dimuat
+      if (!isClerkUserLoaded || !isSessionLoaded) return;
+
+      // Jika user belum login di Clerk, pastikan state kosong
+      if (!clerkUser || !session) {
+        if (mounted) {
+          setUser(null);
+          setIsLoading(false);
+          localStorage.removeItem('user');
+        }
+        return;
       }
-    });
 
-    const loadingTimeout = window.setTimeout(() => {
-      if (mounted) {
-        setIsLoading(false);
-      }
-    }, 3000);
-
-    // Fetch profile from Supabase
-    const fetchProfile = async (userId: string, token?: string) => {
       try {
-        if (token) {
-          const response = await fetch('/api/profile', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+        // Minta Token JWT khusus untuk Supabase dari Clerk Session
+        const token = await session.getToken({ template: 'supabase' });
+        if (!token) throw new Error('No Supabase token generated from Clerk');
 
-          if (response.ok) {
-            const data = await response.json();
-            return (data?.profile as ProfileRow | null) || null;
-          }
+        // Buat Supabase Client khusus yang menyertakan token ini (melewati RLS)
+        const supabase = createClerkSupabaseClient(token);
+
+        // Ambil profil dari tabel 'profiles' Supabase
+        const supabaseUuid = clerkUser.publicMetadata?.supabase_uuid as string | undefined;
+        if (!supabaseUuid) {
+          console.warn('Supabase UUID not found in Clerk metadata (Webhook might not have finished yet)');
+          // Set isLoading false so it doesn't hang, it will re-fetch when metadata updates
+          if (mounted) setIsLoading(false);
+          return;
         }
 
-        const { supabase } = await import('@/lib/supabase');
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', userId)
+          .eq('id', supabaseUuid)
           .maybeSingle();
 
         if (error) {
-          if (Object.keys(error as object).length === 0) {
-            return null;
-          }
-
-          const message = (error as { message?: string }).message || '';
-          const code = (error as { code?: string }).code || '';
-
-          // Ignore "no rows found" and "table does not exist" errors
-          if (
-            code === 'PGRST116' || 
-            code === '42P01' || 
-            /no rows found/i.test(message) ||
-            /could not find the table/i.test(message) ||
-            /relation .* does not exist/i.test(message)
-          ) {
-            return null;
-          }
-
-          const isEmptyError = !code && !message;
-          if (isEmptyError) {
-            return null;
-          }
-
-          console.warn('Warning: Could not fetch profile', { code, message });
-          return null;
-        }
-        
-        return (data as ProfileRow | null) || null;
-      } catch (err) {
-        console.warn('Warning: Failed to fetch profile', err);
-        return null;
-      }
-    };
-
-    const fetchUserRole = async (userId: string, token?: string) => {
-      try {
-        if (!token) {
-          const { supabase } = await import('@/lib/supabase');
-          const { data: { session } } = await supabase.auth.getSession();
-          token = session?.access_token;
+          console.warn('Error fetching Supabase profile:', error);
         }
 
-        if (!token) return null;
-
-        const res = await fetch('/api/auth/role', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
-        if (!res.ok) return null;
-        
-        const data = await res.json();
-        return data?.role ?? null;
-      } catch (err) {
-        console.warn('Warning: Failed to fetch user role via API', err);
-        return null;
-      }
-    };
-
-    // Load function to sync state
-    const syncSession = async () => {
-      try {
-        const { supabase } = await import('@/lib/supabase');
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session && mounted) {
-          const [profile, roleFromDb] = await Promise.all([
-            fetchProfile(session.user.id, session.access_token),
-            fetchUserRole(session.user.id, session.access_token),
-          ]);
+        // Gabungkan data dasar Clerk dengan data spesifik dari Supabase Profiles
+        if (mounted) {
+          const email = clerkUser.primaryEmailAddress?.emailAddress;
           const u: UserProfile = {
-            id: session.user.id,
-            name: profile?.name || resolveUserName(session.user),
-            email: session.user.email,
-            phone: profile?.phone,
-            location: profile?.location,
-            role: roleFromDb || profile?.role || session.user.user_metadata?.role,
-            bio: profile?.bio,
-            created_at: profile?.created_at,
-            updated_at: profile?.updated_at,
+            id: supabaseUuid,
+            name: data?.name || clerkUser.fullName || clerkUser.firstName || email?.split('@')[0] || 'User',
+            email: email,
+            phone: data?.phone,
+            location: data?.location,
+            role: data?.role,
+            bio: data?.bio,
+            created_at: data?.created_at,
+            updated_at: data?.updated_at,
           };
+
           localStorage.setItem('user', JSON.stringify(u));
           setUser(u);
-        } else if (mounted) {
-          localStorage.removeItem('user');
-          setUser(null);
         }
-      } catch (error) {
-        console.warn('Warning: Failed to load session', error);
+      } catch (err) {
+        console.warn('Failed to sync profile from Supabase', err);
       } finally {
         if (mounted) setIsLoading(false);
       }
-    };
+    }
 
-    syncSession();
-
-    const handleProfileUpdated = (event: Event) => {
-      const customEvent = event as CustomEvent<UserProfile>;
-      if (mounted && customEvent.detail) {
-        const nextUser = customEvent.detail;
-        localStorage.setItem('user', JSON.stringify(nextUser));
-        setUser(nextUser);
-      }
-    };
-
-    window.addEventListener('profile-updated', handleProfileUpdated as EventListener);
-
-    const subscribeToProfile = async (supabase: SupabaseBrowserClient, session: Session) => {
-      if (!session?.user?.id) return;
-
-      if (channel) {
-        await supabase.removeChannel(channel);
-        channel = null;
-      }
-
-      channel = supabase
-        .channel(`profile:${session.user.id}:${channelInstanceId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'profiles',
-            filter: `id=eq.${session.user.id}`,
-          },
-          (payload) => {
-            if (payload.new && mounted) {
-              const updatedProfile = payload.new as ProfileRow;
-              const updatedUser: UserProfile = {
-                id: session.user.id,
-                name: updatedProfile.name || resolveUserName(session.user),
-                email: session.user.email,
-                phone: updatedProfile.phone,
-                location: updatedProfile.location,
-                role: updatedProfile.role,
-                bio: updatedProfile.bio,
-                created_at: updatedProfile.created_at,
-                updated_at: updatedProfile.updated_at,
-              };
-              localStorage.setItem('user', JSON.stringify(updatedUser));
-              setUser(updatedUser);
-            }
-          }
-        )
-        .subscribe();
-    };
-
-    // Listen to changes (login, logout, token refresh, email confirm)
-    import('@/lib/supabase').then(({ supabase }) => {
-      supabaseClient = supabase;
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session && mounted) {
-          const [profile, roleFromDb] = await Promise.all([
-            fetchProfile(session.user.id, session.access_token),
-            fetchUserRole(session.user.id, session.access_token),
-          ]);
-          const u: UserProfile = {
-            id: session.user.id,
-            name: profile?.name || resolveUserName(session.user),
-            email: session.user.email,
-            phone: profile?.phone,
-            location: profile?.location,
-            role: roleFromDb || profile?.role || session.user.user_metadata?.role,
-            bio: profile?.bio,
-            created_at: profile?.created_at,
-            updated_at: profile?.updated_at,
-          };
-          localStorage.setItem('user', JSON.stringify(u));
-          setUser(u);
-          await subscribeToProfile(supabase, session);
-        } else if (event === 'SIGNED_OUT' && mounted) {
-          setUser(null);
-          localStorage.removeItem('user');
-          if (channel) {
-            await supabase.removeChannel(channel);
-            channel = null;
-          }
-        }
-      });
-
-      authSubscription = subscription;
-    });
+    syncSupabaseProfile();
 
     return () => {
       mounted = false;
-      window.clearTimeout(loadingTimeout);
-      window.removeEventListener('profile-updated', handleProfileUpdated as EventListener);
-      authSubscription?.unsubscribe();
-      if (channel && supabaseClient) {
-        supabaseClient.removeChannel(channel);
-      }
     };
-  }, []);
+  }, [clerkUser, session, isClerkUserLoaded, isSessionLoaded]);
 
+  // Hapus Supabase Realtime sementara, jika sangat dibutuhkan nanti bisa dipasang dengan token JWT dari Clerk
+  
   return { user, isLoading };
 }

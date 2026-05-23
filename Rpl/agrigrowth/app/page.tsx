@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import HeaderWithModal from "@/components/HeaderWithModal";
-import AuthModal from "@/components/AuthModal";
-import { useUser } from "@/hooks/useUser";
 import { motion, Variants } from "framer-motion";
+import { useAuth } from "@clerk/nextjs";
 
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
@@ -30,53 +29,27 @@ const heroBackground =
   "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?q=80&w=2400&auto=format&fit=crop";
 
 export default function Home() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
-  const { user, isLoading } = useUser();
+  const { isSignedIn } = useAuth();
   const router = useRouter();
 
-  // Auto-open modal jika user belum login
-  useEffect(() => {
-    if (!isLoading && !user) {
-      // Kita tambahkan jeda sedikit agar onAuthStateChange punya waktu untuk memproses link email
-      const timer = setTimeout(() => {
-        setIsModalOpen(true);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [user, isLoading]);
-
-  useEffect(() => {
-    import("@/lib/supabase").then(({ supabase }) => {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          // Hanya memunculkan alert jika hash di URL menandakan konfirmasi atau akses token
-          if (window.location.hash.includes('access_token') || window.location.href.includes('code=')) {
-            alert("Konfirmasi Berhasil! Anda telah berhasil login.");
-            router.push("/dashboard");
-          }
-        }
-      });
-      return () => subscription.unsubscribe();
-    });
-  }, [router]);
-
   const handleGetStarted = () => {
-    if (user) {
+    if (isSignedIn) {
       router.push("/dashboard");
     } else {
-      setAuthMode("signup");
-      setIsModalOpen(true);
+      // With Clerk, we can redirect to sign in or just prompt them to click Sign In on the header
+      // Clerk's modal is triggered by the header buttons, but for this button we can redirect
+      // or we can use Clerk's SignedIn/SignedOut components. We'll just push to sign-in for now
+      // Actually, since they might want the modal, the easiest way is to let Clerk handle it, 
+      // but without the `SignInButton` wrapping here, it's easier to just redirect to /sign-in
+      // which Clerk intercepts if we don't have it. Or better, we can wrap the button in SignInButton.
+      // But for simplicity, we just trigger a click on the header's Sign Up button!
+      const signUpBtn = document.querySelector('header button, .bg-\\[\\#365a1a\\]') as HTMLButtonElement;
+      if (signUpBtn) signUpBtn.click();
     }
   };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#081018] text-white">
-      <AuthModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        initialMode={authMode}
-      />
       <div
         aria-hidden
         className="absolute inset-0"
@@ -89,14 +62,8 @@ export default function Home() {
 
       <div className="relative mx-auto flex w-full max-w-[1440px] flex-col px-5 pb-10 pt-6 sm:px-10 lg:px-12 lg:pt-8">
         <HeaderWithModal
-          onSignUpClick={() => {
-            setAuthMode("signup");
-            setIsModalOpen(true);
-          }}
-          onSignInClick={() => {
-            setAuthMode("login");
-            setIsModalOpen(true);
-          }}
+          onSignUpClick={() => {}}
+          onSignInClick={() => {}}
         />
 
         <motion.section 

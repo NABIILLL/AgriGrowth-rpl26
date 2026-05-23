@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { UserCircle2, Menu, X } from "lucide-react";
-import { useUser } from "@/hooks/useUser";
-import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
+import { Menu, X } from "lucide-react";
+import { SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/nextjs";
 import AgrigrowthLogo from "@/components/AgrigrowthLogo";
 
 interface HeaderWithModalProps {
@@ -13,8 +12,7 @@ interface HeaderWithModalProps {
 }
 
 export default function HeaderWithModal({ onSignUpClick, onSignInClick }: HeaderWithModalProps) {
-  const { user, isLoading } = useUser();
-  const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
+  const { isSignedIn, isLoaded } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -30,41 +28,30 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
 
         <div className="flex items-center gap-3">
           <div className="hidden lg:flex items-center gap-3">
-            {!isLoading && (
-              user ? (
-                <>
-                  <Link
-                    href="/profile"
-                    className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.9)] px-4 py-2 shadow-md text-white transition hover:bg-[rgba(54,90,26,1)]"
-                  >
-                    <span className="text-lg font-medium">{user.name}</span>
-                    <UserCircle2 className="h-8 w-8 text-white/95" strokeWidth={1.7} />
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    disabled={isLoggingOut}
-                    className="text-sm font-semibold text-white/90 hover:text-white transition"
-                  >
-                    {isLoggingOut ? "Keluar..." : "Logout"}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={onSignInClick || onSignUpClick}
-                    className="text-sm font-semibold text-white/85 hover:text-white transition"
-                  >
+            {isLoaded && isSignedIn && (
+              <UserButton 
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: "w-10 h-10 shadow-md",
+                  }
+                }}
+              />
+            )}
+            {isLoaded && !isSignedIn && (
+              <>
+                <SignInButton mode="modal">
+                  <button className="text-sm font-semibold text-white/85 hover:text-white transition">
                     Sign In
                   </button>
-                  <button
-                    onClick={onSignUpClick}
-                    className="inline-flex items-center gap-3 rounded-full bg-[#365a1a] px-4 py-2 shadow-lg hover:bg-[#2d4915] transition text-white"
-                  >
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <button className="inline-flex items-center gap-3 rounded-full bg-[#365a1a] px-4 py-2 shadow-lg hover:bg-[#2d4915] transition text-white">
                     <span className="text-lg font-medium">Sign Up</span>
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f3b300] font-bold text-black">›</span>
                   </button>
-                </>
-              )
+                </SignUpButton>
+              </>
             )}
           </div>
 
@@ -88,22 +75,21 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
             </nav>
 
             <div className="mt-3 border-t border-white/10 pt-3">
-              {!isLoading ? (
-                user ? (
-                  <div className="flex flex-col gap-2">
-                    <Link onClick={() => setMobileOpen(false)} href="/profile" className="flex items-center gap-2 rounded-md px-3 py-2 bg-[rgba(54,90,26,0.9)] text-white">
-                      <UserCircle2 className="h-5 w-5" />
-                      <span className="font-medium">{user.name}</span>
-                    </Link>
-                    <button onClick={() => { setMobileOpen(false); handleLogout(); }} className="text-left text-sm font-semibold text-white/90">{isLoggingOut ? 'Keluar...' : 'Logout'}</button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    <button onClick={() => { setMobileOpen(false); (onSignInClick || onSignUpClick)(); }} className="text-left text-sm font-semibold text-white/90">Sign In</button>
-                    <button onClick={() => { setMobileOpen(false); onSignUpClick(); }} className="rounded-md bg-[rgba(54,90,26,0.9)] px-3 py-2 text-white font-medium">Sign Up</button>
-                  </div>
-                )
-              ) : null}
+              {isLoaded && isSignedIn && (
+                <div className="flex flex-col gap-2 mt-2 items-start">
+                  <UserButton afterSignOutUrl="/" showName={true} />
+                </div>
+              )}
+              {isLoaded && !isSignedIn && (
+                <div className="flex flex-col gap-2">
+                  <SignInButton mode="modal">
+                    <button className="text-left text-sm font-semibold text-white/90">Sign In</button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <button className="rounded-md bg-[rgba(54,90,26,0.9)] px-3 py-2 text-white font-medium text-left">Sign Up</button>
+                  </SignUpButton>
+                </div>
+              )}
             </div>
           </div>
         )}
