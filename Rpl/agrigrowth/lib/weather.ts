@@ -160,10 +160,22 @@ export async function getWeatherForecast(
       { next: { revalidate: 600 } } // Cache for 10 minutes
     );
 
-    if (!response.ok) throw new Error("Failed to fetch forecast data");
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.warn("Open-Meteo forecast request failed", {
+        status: response.status,
+        body: errorBody,
+      });
+      return [];
+    }
 
     const data = await response.json();
     const daily = data.daily;
+
+    if (!daily?.time?.length) {
+      console.warn("Open-Meteo forecast response missing daily data", data);
+      return [];
+    }
 
     return daily.time.slice(0, 7).map((date: string, index: number) => ({
       day: getDayName(date),

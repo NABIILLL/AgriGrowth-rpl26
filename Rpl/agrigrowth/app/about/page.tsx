@@ -46,14 +46,20 @@ export default function About() {
         />
 
         <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
-          <Link href={user ? "/dashboard" : "/"} className="transition hover:opacity-80">
+          <Link href="/" className="transition hover:opacity-80">
             Home
           </Link>
           <Link href="/about" className="border-b-2 border-[#365a1a]">
             About
           </Link>
-          <Link href="/wireframe4" className="transition hover:opacity-80">
-            Features
+          <Link href="/growth-tracker" className="transition hover:opacity-80">
+            Growth Tracker
+          </Link>
+          <Link href="/weather" className="transition hover:opacity-80">
+            Weather
+          </Link>
+          <Link href="/history" className="transition hover:opacity-80">
+            History
           </Link>
         </nav>
 
@@ -84,9 +90,11 @@ export default function About() {
         {mobileOpen && (
           <div className="sm:hidden absolute right-4 top-16 z-20 w-64 rounded-md bg-white border border-[#e0e0e0] p-4 shadow-lg">
             <nav className="flex flex-col gap-3">
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href={user ? "/dashboard" : "/"}>Home</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/">Home</Link>
               <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/about">About</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/wireframe4">Features</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/growth-tracker">Growth Tracker</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/weather">Weather</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/history">History</Link>
             </nav>
 
             <div className="mt-3 border-t border-[#e0e0e0] pt-3">
@@ -202,6 +210,72 @@ export default function About() {
               <p className="mt-2 text-xs sm:text-[13px] text-[#365a1a]">Mobile &amp; desktop</p>
             </motion.div>
           </div>
+        </div>
+
+        {/* Growth Tracker Section */}
+        <div className="mt-16 sm:mt-20 pt-12 sm:pt-16 border-t-2 border-[#d9d9d9]">
+          <motion.article variants={fadeUpVariant} className="rounded-[20px] sm:rounded-[30px] bg-white p-4 sm:p-5 md:p-6 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.2),-6px_6px_15px_0px_rgba(0,0,0,0.2)]">
+            <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-center md:gap-8">
+              <div className="h-[150px] sm:h-[190px] w-full overflow-hidden rounded-[16px] sm:rounded-[20px] md:h-[273px] md:max-w-[605px]">
+                <img alt="Growth Tracker" className="h-full w-full object-cover" src="https://images.unsplash.com/photo-1592982537447-6f2a6a0c5c8e?q=80&w=800&auto=format&fit=crop" />
+              </div>
+
+              <div className="w-full md:max-w-[578px]">
+                <h2 className="text-[32px] sm:text-[42px] font-extrabold leading-[1.05] text-[#365a1a] lg:text-[60px]">
+                  Growth Tracker
+                </h2>
+                <p className="mt-2 sm:mt-3 text-[13px] sm:text-[15px] font-medium leading-[1.35] text-[#365a1a] lg:text-[18px]">
+                  Berfungsi sebagai buku catatan digital untuk memasukkan data fisik tanaman secara berkala, meliputi parameter tinggi tanaman, jumlah daun, jumlah cabang, hingga kondisi visual tanaman di lapangan. Melakukan pemrosesan data secara otomatis untuk menghasilkan nilai statistik tanpa pengolahan manual.
+                </p>
+              </div>
+            </div>
+          </motion.article>
+
+          {/* Features List */}
+          <motion.div variants={fadeUpVariant} className="mt-6 rounded-[20px] sm:rounded-[30px] bg-white p-4 sm:p-6 md:p-8 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.2),-6px_6px_15px_0px_rgba(0,0,0,0.2)]">
+            <h3 className="text-[24px] sm:text-[32px] font-bold md:text-[40px]">Fitur Growth Tracker</h3>
+
+            <div className="mt-4 sm:mt-6 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
+              {[
+                {
+                  title: "Pencatatan Data Berkala",
+                  description: "Masukkan data fisik tanaman secara berkala dengan parameter lengkap",
+                },
+                {
+                  title: "Analisis Otomatis",
+                  description: "Sistem otomatis menganalisis dan memberikan rekomendasi untuk tanaman Anda",
+                },
+                {
+                  title: "Perhitungan Statistik",
+                  description: "Hitung rata-rata pertumbuhan, produktivitas, dan kebutuhan pupuk secara akurat",
+                },
+                {
+                  title: "Konversi Luas Lahan",
+                  description: "Konversi kebutuhan pupuk berdasarkan luas lahan yang Anda budidayakan",
+                },
+                {
+                  title: "Riwayat Lengkap",
+                  description: "Simpan dan lihat riwayat pengamatan tanaman dari waktu ke waktu",
+                },
+                {
+                  title: "Rekomendasi Perawatan",
+                  description: "Dapatkan rekomendasi perawatan berdasarkan data yang telah dimasukkan",
+                },
+              ].map((feature, index) => (
+                <div
+                  key={index}
+                  className="rounded-[16px] sm:rounded-[20px] border-2 border-[#365a1a] p-3 sm:p-4 md:p-6"
+                >
+                  <h4 className="text-[16px] sm:text-[18px] font-bold text-[#365a1a] md:text-[20px]">
+                    {feature.title}
+                  </h4>
+                  <p className="mt-1 sm:mt-2 text-[12px] sm:text-[14px] text-[#365a1a]/80 md:text-[16px]">
+                    {feature.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
         </div>
       </motion.section>
     </main>

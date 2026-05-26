@@ -52,12 +52,12 @@ export default function AuthCallback() {
             }
           }
 
-          const target = role === "admin" ? "/admin" : "/dashboard";
+          const target = role === "admin" ? "/admin" : "/growth-tracker";
           router.replace(target);
           return;
         }
 
-        router.replace("/dashboard");
+        router.replace("/growth-tracker");
         
       } catch (err: any) {
         console.error("Auth callback error:", err);

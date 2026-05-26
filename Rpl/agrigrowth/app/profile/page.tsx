@@ -137,14 +137,20 @@ export default function ProfilePage() {
         </div>
 
         <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
-          <Link href={user ? "/dashboard" : "/"} className="transition hover:opacity-80">
+          <Link href="/" className="transition hover:opacity-80">
             Home
           </Link>
           <Link href="/about" className="transition hover:opacity-80">
             About
           </Link>
-          <Link href="/wireframe4" className="transition hover:opacity-80">
-            Features
+          <Link href="/growth-tracker" className="transition hover:opacity-80">
+            Growth Tracker
+          </Link>
+          <Link href="/weather" className="transition hover:opacity-80">
+            Weather
+          </Link>
+          <Link href="/history" className="transition hover:opacity-80">
+            History
           </Link>
         </nav>
 

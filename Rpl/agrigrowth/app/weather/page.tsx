@@ -214,20 +214,26 @@ export default function WeatherInfo() {
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
-        <Link href="/dashboard" className="flex items-center gap-2.5 transition hover:opacity-80">
+        <Link href="/" className="flex items-center gap-2.5 transition hover:opacity-80">
           <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgBrandLogo} />
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
         </Link>
 
         <nav className="hidden items-center gap-10 text-[21px] font-bold lg:flex">
-          <Link href="/dashboard" className={navLinkClass}>
+          <Link href="/" className={navLinkClass}>
             Home
           </Link>
           <Link href="/about" className={navLinkClass}>
             About
           </Link>
-          <Link href="/wireframe4" className={navLinkClass}>
-            Features
+          <Link href="/growth-tracker" className={navLinkClass}>
+            Growth Tracker
+          </Link>
+          <Link href="/weather" className={navLinkClass}>
+            Weather
+          </Link>
+          <Link href="/history" className={navLinkClass}>
+            History
           </Link>
         </nav>
 
@@ -468,13 +474,6 @@ export default function WeatherInfo() {
             </div>
           </section>
         ) : null}
-
-        <Link
-          href="/wireframe4"
-          className="inline-block rounded-full bg-[#365a1a] px-6 py-3 text-[14px] font-semibold text-white transition hover:bg-[#2d4915]"
-        >
-          ← Kembali ke Features
-        </Link>
       </section>
 
       <style jsx global>{`

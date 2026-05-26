@@ -23,7 +23,9 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
         <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex opacity-90">
           <Link className="text-white/90 hover:text-white transition" href="/">Home</Link>
           <Link className="text-white/90 hover:text-white transition" href="/about">About</Link>
-          <Link className="text-white/90 hover:text-white transition" href="/wireframe4">Features</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/growth-tracker">Growth Tracker</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/weather">Weather</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/history">History</Link>
         </nav>
 
         <div className="flex items-center gap-3 min-h-[48px]">
@@ -70,7 +72,9 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
             <nav className="flex flex-col gap-3">
               <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/">Home</Link>
               <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/about">About</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/wireframe4">Features</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/growth-tracker">Growth Tracker</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/weather">Weather</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/history">History</Link>
             </nav>
 
             <div className="mt-3 border-t border-white/10 pt-3">

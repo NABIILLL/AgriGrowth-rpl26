@@ -1,23 +1,14 @@
-import { supabase } from "@/lib/supabase";
+import { getClerkSessionToken } from "@/lib/clerkSupabaseToken";
 
 type AdminFetchOptions = RequestInit & { json?: unknown };
 
-const getAccessToken = async () => {
-  const { data, error } = await supabase.auth.getSession();
-  if (error) {
-    throw new Error(error.message || "Failed to get session");
-  }
-  return data.session?.access_token || "";
-};
-
 export const adminFetch = async (path: string, options: AdminFetchOptions = {}) => {
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error("No access token. Please login again.");
-  }
+  const token = await getClerkSessionToken().catch(() => "");
 
   const headers = new Headers(options.headers || {});
-  headers.set("Authorization", `Bearer ${token}`);
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
 
   let body = options.body;
   if (options.json !== undefined) {
@@ -29,6 +20,7 @@ export const adminFetch = async (path: string, options: AdminFetchOptions = {}) 
     ...options,
     headers,
     body,
+    credentials: "include",
   });
 
   const data = await res.json().catch(() => ({}));

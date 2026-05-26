@@ -493,20 +493,26 @@ export default function ObservationHistory() {
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       {/* Header */}
       <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
-        <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2.5 hover:opacity-80 transition">
+        <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition">
           <img alt="Agrigrowth logo" loading="lazy" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
         </Link>
 
         <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-10 text-[21px] font-bold lg:flex">
-          <Link href={user ? "/dashboard" : "/"} className="transition hover:opacity-80">
+          <Link href="/" className="transition hover:opacity-80">
             Home
           </Link>
           <Link href="/about" className="transition hover:opacity-80">
             About
           </Link>
-          <Link href="/wireframe4" className="transition hover:opacity-80">
-            Features
+          <Link href="/growth-tracker" className="transition hover:opacity-80">
+            Growth Tracker
+          </Link>
+          <Link href="/weather" className="transition hover:opacity-80">
+            Weather
+          </Link>
+          <Link href="/history" className="transition hover:opacity-80">
+            History
           </Link>
         </nav>
 

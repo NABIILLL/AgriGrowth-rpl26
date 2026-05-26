@@ -69,12 +69,11 @@ export default function Wireframe4() {
 				</div>
 
 				<nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
-					<Link href={user ? "/dashboard" : "/"} className="hover:opacity-80 transition">Home</Link>
+					<Link href="/" className="hover:opacity-80 transition">Home</Link>
 					<Link href="/about" className="hover:opacity-80 transition">About</Link>
-					<Link href="/wireframe4" className="border-b-2 border-[#365a1a]">Features</Link>
-				</nav>
-
-				<div className="flex items-center gap-4 min-h-[48px]">
+					<Link href="/growth-tracker" className="hover:opacity-80 transition">Growth Tracker</Link>
+				<Link href="/weather" className="hover:opacity-80 transition">Weather</Link>
+				<Link href="/history" className="hover:opacity-80 transition">History</Link>
 					{!isLoading && (
 						user ? (
 							<div className="hidden sm:flex items-center gap-4">
@@ -98,18 +97,20 @@ export default function Wireframe4() {
 					>
 						{mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
 					</button>
-				</div>
+			</nav>
 
 				{/* Mobile menu panel */}
 				{mobileOpen && (
 					<div className="sm:hidden absolute right-4 top-20 z-20 w-64 rounded-md bg-white border border-[#e0e0e0] p-4 shadow-lg">
 						<nav className="flex flex-col gap-3">
-							<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href={user ? "/dashboard" : "/"}>Home</Link>
+							<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/">Home</Link>
 							<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/about">About</Link>
-							<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/wireframe4">Features</Link>
-						</nav>
+							<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/growth-tracker">Growth Tracker</Link>
+						<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/weather">Weather</Link>
+						<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/history">History</Link>
+					</nav>
 
-						<div className="mt-3 border-t border-[#e0e0e0] pt-3">
+					<div className="mt-3 border-t border-[#e0e0e0] pt-3">
 							{!isLoading ? (
 								user ? (
 									<div className="flex flex-col gap-2">
@@ -139,7 +140,7 @@ export default function Wireframe4() {
 				className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-5 pb-12 pt-6 sm:px-10 lg:px-14 lg:pt-8"
 			>
 				{featureCards.map((feature, index) => {
-					const links = ["/features/growth-tracker", "/features/weather", "/features/overviews"];
+					const links = ["/growth-tracker", "/weather", "/history"];
 					return (
 						<motion.article
 							variants={fadeUpVariant}
