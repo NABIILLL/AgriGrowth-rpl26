@@ -26,7 +26,7 @@ const fadeUpVariant: Variants = {
 const imgRice2 = "https://images.unsplash.com/photo-1530507629858-e4977d30e9e0?q=80&w=800&auto=format&fit=crop";
 const imgDownload41 = "https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=80&w=800&auto=format&fit=crop";
 const imgPadiPraktikum = "https://images.unsplash.com/photo-1628151015968-3a4429e9ef04?q=80&w=800&auto=format&fit=crop";
-const imgOverviewImage = "https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=80&w=800&auto=format&fit=crop";
+const imgHistoryImage = "https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=80&w=800&auto=format&fit=crop";
 const imgLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
 const imgProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 
@@ -36,7 +36,7 @@ const plantImages: { [key: string]: string } = {
   bawang: imgPadiPraktikum,
 };
 
-export default function Overviews() {
+export default function History() {
   const { user, isLoading } = useUser();
   const [trackers, setTrackers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,20 +115,26 @@ export default function Overviews() {
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       {/* Header */}
       <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
-        <Link href="/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition">
+        <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition">
           <img alt="Agrigrowth logo" loading="lazy" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
           <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
         </Link>
 
         <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-10 text-[21px] font-bold lg:flex">
-          <Link href="/dashboard" className="hover:opacity-80 transition">
+          <Link href="/" className="hover:opacity-80 transition">
             Home
           </Link>
           <Link href="/about" className="hover:opacity-80 transition">
             About
           </Link>
-          <Link href="/wireframe4" className="hover:opacity-80 transition">
-            Features
+          <Link href="/growth-tracker" className="hover:opacity-80 transition">
+            Growth Tracker
+          </Link>
+          <Link href="/weather" className="hover:opacity-80 transition">
+            Weather
+          </Link>
+          <Link href="/history" className="hover:opacity-80 transition">
+            History
           </Link>
         </nav>
 
@@ -157,12 +163,12 @@ export default function Overviews() {
         <motion.article variants={fadeUpVariant} className="rounded-[20px] sm:rounded-[30px] bg-white p-4 sm:p-5 md:p-6 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.2),-6px_6px_15px_0px_rgba(0,0,0,0.2)]">
           <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-center md:gap-8">
             <div className="h-[150px] sm:h-[190px] w-full overflow-hidden rounded-[16px] sm:rounded-[20px] md:h-[273px] md:max-w-[605px]">
-              <img alt="Overviews" loading="lazy" className="h-full w-full object-cover" src={imgOverviewImage} />
+              <img alt="History" loading="lazy" className="h-full w-full object-cover" src={imgHistoryImage} />
             </div>
 
             <div className="w-full md:max-w-[578px]">
               <h1 className="text-[32px] sm:text-[42px] font-extrabold leading-[1.05] text-[#365a1a] lg:text-[60px]">
-                Overviews
+                History
               </h1>
               <p className="mt-2 sm:mt-3 text-[13px] sm:text-[15px] font-medium leading-[1.35] text-[#365a1a] lg:text-[18px]">
                 Menyediakan gambaran menyeluruh untuk setiap aktivitas pengamatan pada sawah, ladang, maupun tanaman yang sedang dibudidayakan, sehingga pengguna dapat memantau kondisi secara lebih terstruktur dan terorganisir.
@@ -171,7 +177,7 @@ export default function Overviews() {
           </div>
         </motion.article>
 
-        {/* Overview Cards or Empty State */}
+        {/* History Cards or Empty State */}
         <motion.div variants={fadeUpVariant} className="rounded-[20px] sm:rounded-[30px] bg-white p-4 sm:p-6 md:p-8 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.2),-6px_6px_15px_0px_rgba(0,0,0,0.2)]">
           <h2 className="text-[24px] sm:text-[32px] font-bold md:text-[40px]">Ringkasan Lahan Anda</h2>
 
@@ -258,14 +264,6 @@ export default function Overviews() {
             </div>
           )}
         </motion.div>
-
-        {/* Back Button */}
-        <Link
-          href="/wireframe4"
-          className="inline-block rounded-full bg-[#365a1a] px-4 sm:px-6 py-2 sm:py-3 text-[12px] sm:text-[14px] font-semibold text-white transition hover:bg-[#2d4915]"
-        >
-          ← Kembali ke Features
-        </Link>
       </motion.section>
     </main>
   );

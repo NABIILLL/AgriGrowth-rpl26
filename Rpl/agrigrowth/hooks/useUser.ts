@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useUser as useClerkUser, useSession as useClerkSession } from '@clerk/nextjs';
-import { createClerkSupabaseClient } from '@/lib/supabaseClient';
 
 export interface UserProfile {
   id: string;
@@ -15,6 +14,18 @@ export interface UserProfile {
   created_at?: string;
   updated_at?: string;
 }
+
+type ProfileRow = {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  role?: string | null;
+  bio?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
 
 export function useUser() {
   const { user: clerkUser, isLoaded: isClerkUserLoaded } = useClerkUser();
@@ -41,45 +52,82 @@ export function useUser() {
       }
 
       try {
-        // Minta Token JWT khusus untuk Supabase dari Clerk Session
-        const token = await session.getToken({ template: 'supabase' });
-        if (!token) throw new Error('No Supabase token generated from Clerk');
+        const token = await session.getToken().catch(() => null);
 
-        // Buat Supabase Client khusus yang menyertakan token ini (melewati RLS)
-        const supabase = createClerkSupabaseClient(token);
+        const clerkRole = clerkUser.publicMetadata?.role as string | undefined;
+        let resolvedRole = clerkRole || undefined;
+        const getAuthHeaders = () => (
+          token ? { Authorization: `Bearer ${token}` } : undefined
+        );
 
-        // Ambil profil dari tabel 'profiles' Supabase
+        try {
+          const roleResponse = await fetch('/api/auth/role', {
+            headers: getAuthHeaders(),
+            credentials: 'include',
+          });
+
+          if (roleResponse.ok) {
+            const payload = await roleResponse.json();
+            resolvedRole = payload?.role || resolvedRole;
+          }
+        } catch (error) {
+          console.warn('Failed to resolve role from /api/auth/role', error);
+        }
+
+        const email = clerkUser.primaryEmailAddress?.emailAddress;
         const supabaseUuid = clerkUser.publicMetadata?.supabase_uuid as string | undefined;
-        if (!supabaseUuid) {
-          console.warn('Supabase UUID not found in Clerk metadata (Webhook might not have finished yet)');
-          // Set isLoading false so it doesn't hang, it will re-fetch when metadata updates
-          if (mounted) setIsLoading(false);
+
+        let data: ProfileRow | null = null;
+
+        try {
+          const profileResponse = await fetch('/api/profile', {
+            headers: getAuthHeaders(),
+            credentials: 'include',
+          });
+
+          if (profileResponse.ok) {
+            const payload = await profileResponse.json();
+            data = payload?.profile || null;
+          } else {
+            console.warn('Failed to resolve profile from /api/profile', profileResponse.status);
+          }
+        } catch (error) {
+          console.warn('Failed to fetch /api/profile', error);
+        }
+
+        const profileId = data?.id || supabaseUuid;
+
+        if (!profileId) {
+          const fallbackUser: UserProfile = {
+            id: clerkUser.id,
+            name: clerkUser.fullName || clerkUser.firstName || email?.split('@')[0] || 'User',
+            email,
+            role: resolvedRole,
+          };
+
+          if (mounted) {
+            localStorage.setItem('user', JSON.stringify(fallbackUser));
+            setUser(fallbackUser);
+          }
+
+          console.warn('Supabase profile not found by Clerk metadata or email');
           return;
         }
 
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', supabaseUuid)
-          .maybeSingle();
-
-        if (error) {
-          console.warn('Error fetching Supabase profile:', error);
-        }
+        const resolvedDbRole = data?.role || resolvedRole;
 
         // Gabungkan data dasar Clerk dengan data spesifik dari Supabase Profiles
         if (mounted) {
-          const email = clerkUser.primaryEmailAddress?.emailAddress;
           const u: UserProfile = {
-            id: supabaseUuid,
+            id: profileId,
             name: data?.name || clerkUser.fullName || clerkUser.firstName || email?.split('@')[0] || 'User',
             email: email,
-            phone: data?.phone,
-            location: data?.location,
-            role: data?.role,
-            bio: data?.bio,
-            created_at: data?.created_at,
-            updated_at: data?.updated_at,
+            phone: data?.phone || undefined,
+            location: data?.location || undefined,
+            role: resolvedDbRole || undefined,
+            bio: data?.bio || undefined,
+            created_at: data?.created_at || undefined,
+            updated_at: data?.updated_at || undefined,
           };
 
           localStorage.setItem('user', JSON.stringify(u));

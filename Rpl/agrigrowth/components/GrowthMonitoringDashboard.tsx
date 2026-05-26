@@ -51,20 +51,26 @@ export default function GrowthMonitoringDashboard({
     <main className="min-h-screen bg-white" data-node-id="360:167">
       {/* Header */}
       <header className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
-        <Link href="/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition">
+        <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition">
           <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
           <b className="text-[21px] leading-none font-bold text-[#365a1a]">Agrigrowth Monitor</b>
         </Link>
 
         <nav className="hidden items-center gap-[60px] text-[21px] font-bold lg:flex text-[#365a1a]">
-          <Link href="/dashboard" className="hover:opacity-80 transition">
+          <Link href="/" className="hover:opacity-80 transition">
             Home
           </Link>
           <Link href="/about" className="hover:opacity-80 transition">
             About
           </Link>
-          <Link href="/wireframe4" className="hover:opacity-80 transition">
-            Features
+          <Link href="/growth-tracker" className="hover:opacity-80 transition">
+            Growth Tracker
+          </Link>
+          <Link href="/weather" className="hover:opacity-80 transition">
+            Weather
+          </Link>
+          <Link href="/history" className="hover:opacity-80 transition">
+            History
           </Link>
         </nav>
 

@@ -1,7 +1,11 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-// Contoh: Memproteksi route yang berawalan dengan /dashboard
-const isProtectedRoute = createRouteMatcher(['/dashboard(.*)'])
+const isProtectedRoute = createRouteMatcher([
+  '/dashboard(.*)',
+  '/admin(.*)',
+  '/profile(.*)',
+  '/observation(.*)',
+])
 
 export default clerkMiddleware(async (auth, req) => {
   if (isProtectedRoute(req)) {

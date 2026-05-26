@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { supabase } from '@/lib/supabase';
+import { getClerkSupabaseToken } from '@/lib/clerkSupabaseToken';
 import type { UserProfile } from '@/hooks/useUser';
 
 interface ProfileEditorProps {
@@ -206,13 +206,13 @@ export default function ProfileEditor({ isOpen, user, onClose }: ProfileEditorPr
     }, 15000);
 
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || sessionData.session?.user.id !== user.id || !sessionData.session.access_token) {
+      const token = await getClerkSupabaseToken();
+      if (!token) {
         toast.error('Sesi login tidak ditemukan. Silakan login ulang.', { id: 'Sesi login tidak ditemukan. Silakan login ulang.' });
         return;
       }
 
-      const profile = await saveProfile(sessionData.session.access_token, {
+      const profile = await saveProfile(token, {
         name: formData.name?.trim(),
         phone: phone.value || undefined,
         location: formData.location?.trim() || undefined,

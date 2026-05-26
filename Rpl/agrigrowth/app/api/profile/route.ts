@@ -1,15 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { getSupabaseService } from "../admin/_utils";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-const getAccessToken = (request: Request) => {
-  const authHeader = request.headers.get("authorization") || "";
-  if (!authHeader.toLowerCase().startsWith("bearer ")) return null;
-  return authHeader.slice(7);
-};
+import { auth, clerkClient } from "@clerk/nextjs/server";
+import { getSupabaseService, requireUser } from "../admin/_utils";
 
 const withTimeout = async <T,>(promise: PromiseLike<T>, message: string, timeoutMs = 6000) => {
   let timeoutId: ReturnType<typeof setTimeout>;
@@ -51,30 +42,47 @@ const normalizeIndonesianPhone = (rawValue?: unknown) => {
   return { value: normalized, error: "" };
 };
 
-const getCurrentUser = async (request: Request) => {
-  const token = getAccessToken(request);
-  if (!token) {
-    return { token: null, user: null, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
+const splitName = (name: string) => {
+  const parts = name.split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] || name,
+    lastName: parts.slice(1).join(" ") || undefined,
+  };
+};
 
-  const anon = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
+const syncClerkProfile = async (profile: {
+  id: string;
+  name: string;
+  role?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  bio?: string | null;
+}) => {
+  const authState = await auth();
+  if (!authState.userId) return;
+
+  const client = await clerkClient();
+  const clerkUser = await client.users.getUser(authState.userId);
+  const publicMetadata = clerkUser.publicMetadata || {};
+  const metadataRole = typeof publicMetadata.role === "string" ? publicMetadata.role : "user";
+  const { firstName, lastName } = splitName(profile.name);
+
+  await client.users.updateUser(authState.userId, {
+    firstName,
+    lastName,
+    publicMetadata: {
+      ...publicMetadata,
+      supabase_uuid: profile.id,
+      role: profile.role || metadataRole,
+      phone: profile.phone || undefined,
+      location: profile.location || undefined,
+      bio: profile.bio || undefined,
+    },
   });
-  const { data, error } = await withTimeout(
-    anon.auth.getUser(token),
-    "Validasi sesi Supabase terlalu lama. Silakan login ulang atau coba lagi.",
-    10000
-  );
-
-  if (error || !data?.user) {
-    return { token, user: null, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  return { token, user: data.user, response: null };
 };
 
 export async function GET(request: Request) {
-  const { user, response } = await getCurrentUser(request);
+  const { user, response } = await requireUser(request);
   if (response) return response;
 
   try {
@@ -89,6 +97,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    if (data) {
+      await syncClerkProfile({
+        id: data.id,
+        name: data.name,
+        role: data.role,
+        phone: data.phone,
+        location: data.location,
+        bio: data.bio,
+      });
+    }
+
     return NextResponse.json({ profile: data });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load profile";
@@ -97,7 +116,7 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const { user, response } = await getCurrentUser(request);
+  const { user, response } = await requireUser(request);
   if (response) return response;
 
   const payload = await request.json();
@@ -145,6 +164,15 @@ export async function PATCH(request: Request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    await syncClerkProfile({
+      id: data.id,
+      name: data.name,
+      role: data.role,
+      phone: data.phone,
+      location: data.location,
+      bio: data.bio,
+    });
 
     return NextResponse.json({ profile: data });
   } catch (error) {
