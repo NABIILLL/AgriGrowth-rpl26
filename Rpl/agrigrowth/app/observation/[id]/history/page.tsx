@@ -7,7 +7,7 @@ import { toast } from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useSession } from "@clerk/nextjs";
 import {
   LineChart,
   Line,
@@ -72,6 +72,23 @@ interface SampleObservationInput {
   fertilizerType: string;
   landArea: string;
 }
+
+async function readJsonResponse(response: Response) {
+  const body = await response.text();
+  if (!body) return null;
+
+  try {
+    return JSON.parse(body);
+  } catch {
+    return null;
+  }
+}
+
+async function createAuthHeaders(session: ReturnType<typeof useSession>["session"]) {
+  const token = await session?.getToken().catch(() => null);
+  return token ? { Authorization: `Bearer ${token}` } : undefined;
+}
+
 export default function ObservationHistoryPage() {
   const [costs, setCosts] = useState<any[]>([]);
   const [editingCost, setEditingCost] = useState<any | null>(null);
@@ -91,9 +108,19 @@ export default function ObservationHistoryPage() {
   const [showInputSampleModal, setShowInputSampleModal] = useState(false);
   const [inputSubmitting, setInputSubmitting] = useState(false);
   const [creatingTracker, setCreatingTracker] = useState(false);
+  const [addingSample, setAddingSample] = useState(false);
   const [newTrackerName, setNewTrackerName] = useState("");
   const [sampleCount, setSampleCount] = useState<number>(3);
-  const defaultSampleInput = { plant_height: "", leaf_count: "", branch_count: "", soil_ph: "", light_condition: "", plant_condition: "", fertilizer_type: "", land_area: "" };
+  const defaultSampleInput = {
+    plant_height: "",
+    leaf_count: "",
+    branch_count: "",
+    soil_ph: "",
+    light_condition: "Sangat Baik",
+    plant_condition: "Sehat",
+    fertilizer_type: "NPK",
+    land_area: "",
+  };
   const [sampleInputs, setSampleInputs] = useState<Array<any>>(Array.from({ length: 3 }, () => ({ ...defaultSampleInput })));
   const [expandedSample, setExpandedSample] = useState<number | null>(0);
   const [sampleObservationInput, setSampleObservationInput] = useState<SampleObservationInput>({
@@ -103,7 +130,7 @@ export default function ObservationHistoryPage() {
     leafCount: "",
     branchCount: "",
     soilPh: "7",
-    lightCondition: "Cukup",
+    lightCondition: "Sangat Baik",
     plantCondition: "Sehat",
     fertilizerType: "NPK",
     landArea: "1",
@@ -124,6 +151,7 @@ export default function ObservationHistoryPage() {
   const [isExporting, setIsExporting] = useState(false);
   const params = useParams();
   const id = (params as any)?.id as string | undefined;
+  const { session } = useSession();
   const searchParams = useSearchParams();
   const trackerIdFromQuery = searchParams ? searchParams.get("trackerId") ?? undefined : undefined;
 
@@ -161,6 +189,59 @@ export default function ObservationHistoryPage() {
   };
 
   const isSampleFilled = (sample: SampleInput) => getMissingSampleFields(sample).length === 0;
+
+  async function handleAddSamplePlant() {
+    if (!userId) {
+      toast.error("Anda harus login untuk menambah sampel", { id: "Anda harus login untuk menambah sampel" });
+      return;
+    }
+
+    if (!selectedTrackerId) {
+      toast.error("Pilih tracker terlebih dahulu", { id: "Pilih tracker terlebih dahulu" });
+      return;
+    }
+
+    setAddingSample(true);
+    try {
+      const response = await fetch("/api/observation/history", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await createAuthHeaders(session) || {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          action: "add-sample",
+          trackerId: selectedTrackerId,
+        }),
+      });
+
+      const result = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal menambah sampel tanaman");
+      }
+
+      const createdSample = result?.sample;
+      if (!createdSample) {
+        throw new Error("Sampel baru tidak ditemukan");
+      }
+
+      setTrackerSamples((prev) => [...prev, createdSample]);
+      setSelectedSampleId(createdSample.id);
+      setSampleObservationInput((prev) => ({
+        ...prev,
+        sampleId: createdSample.id,
+      }));
+      setShowInputSampleModal(true);
+      toast.success("Sampel tanaman berhasil ditambahkan", { id: "Sampel tanaman berhasil ditambahkan" });
+    } catch (error: any) {
+      console.error("Error adding tracker sample:", error);
+      toast.error(error?.message || "Gagal menambah sampel tanaman", { id: error?.message || "Gagal menambah sampel tanaman" });
+    } finally {
+      setAddingSample(false);
+    }
+  }
 
   async function handleCreateTrackerWithSamples() {
     if (!userId) {
@@ -249,7 +330,7 @@ export default function ObservationHistoryPage() {
         }),
       });
 
-      const result = await response.json();
+      const result = await readJsonResponse(response);
 
       if (!response.ok) {
         throw new Error(result?.error || "Failed to create tracker");
@@ -309,9 +390,10 @@ export default function ObservationHistoryPage() {
         setTrackerTitle(typeLabel);
 
         const response = await fetch(`/api/observation/history?plantType=${encodeURIComponent(id)}`, {
+          headers: await createAuthHeaders(session),
           credentials: "include",
         });
-        const result = await response.json();
+        const result = await readJsonResponse(response);
 
         if (!response.ok) throw new Error(result?.error || "Failed to load trackers");
 
@@ -347,9 +429,10 @@ export default function ObservationHistoryPage() {
 
       try {
         const response = await fetch(`/api/observation/history?trackerId=${encodeURIComponent(selectedTrackerId)}&plantType=${encodeURIComponent(id || "")}`, {
+          headers: await createAuthHeaders(session),
           credentials: "include",
         });
-        const result = await response.json();
+        const result = await readJsonResponse(response);
 
         if (!response.ok) throw new Error(result?.error || "Failed to load history");
 
@@ -397,9 +480,10 @@ export default function ObservationHistoryPage() {
 
       try {
         const response = await fetch(`/api/observation/history?trackerId=${encodeURIComponent(selectedTrackerId)}&plantType=${encodeURIComponent(id || "")}`, {
+          headers: await createAuthHeaders(session),
           credentials: "include",
         });
-        const result = await response.json();
+        const result = await readJsonResponse(response);
 
         if (!response.ok) throw new Error(result?.error || "Failed to load sample history");
 
@@ -456,7 +540,7 @@ export default function ObservationHistoryPage() {
       leafCount: "",
       branchCount: "",
       soilPh: "7",
-      lightCondition: "Cukup",
+      lightCondition: "Sangat Baik",
       plantCondition: "Sehat",
       fertilizerType: "NPK",
       landArea: "1",
@@ -465,9 +549,10 @@ export default function ObservationHistoryPage() {
 
   async function refreshSelectedTrackerData(trackerId: string, preferredSampleId?: string) {
     const response = await fetch(`/api/observation/history?trackerId=${encodeURIComponent(trackerId)}&plantType=${encodeURIComponent(id || "")}`, {
+      headers: await createAuthHeaders(session),
       credentials: "include",
     });
-    const result = await response.json();
+    const result = await readJsonResponse(response);
 
     if (!response.ok) {
       throw new Error(result?.error || "Failed to refresh history");
@@ -1204,6 +1289,14 @@ export default function ObservationHistoryPage() {
                     <h2 className="text-[18px] sm:text-[22px] font-bold text-[#365a1a]">🌱 Sampel Tanaman</h2>
                     <p className="text-xs sm:text-sm text-[#365a1a]/70">{trackerSamples.length} sampel aktif untuk lahan ini</p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleAddSamplePlant}
+                    disabled={!selectedTrackerId || addingSample}
+                    className="rounded-full bg-[#365a1a] px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-[#2d4915] transition disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {addingSample ? "Menambahkan..." : "➕ Tambah Sampel"}
+                  </button>
                 </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {trackerSamples.map((sample) => {

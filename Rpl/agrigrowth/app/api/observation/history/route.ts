@@ -29,6 +29,66 @@ export async function POST(request: Request) {
 
   try {
     const payload = await request.json();
+    const action = typeof payload?.action === "string" ? payload.action.trim() : "create-tracker";
+
+    if (action === "add-sample") {
+      const trackerId = typeof payload?.trackerId === "string" ? payload.trackerId.trim() : "";
+      if (!trackerId) {
+        return NextResponse.json({ error: "trackerId is required" }, { status: 400 });
+      }
+
+      const supabase = getSupabaseService();
+      const { data: trackerRow, error: trackerError } = await supabase
+        .from("trackers")
+        .select("id, user_id")
+        .eq("id", trackerId)
+        .maybeSingle();
+
+      if (trackerError) {
+        return NextResponse.json({ error: trackerError.message }, { status: 500 });
+      }
+
+      if (!trackerRow) {
+        return NextResponse.json({ error: "Tracker not found" }, { status: 404 });
+      }
+
+      if (trackerRow.user_id !== user.id) {
+        return NextResponse.json({ error: "Not authorized to modify this tracker" }, { status: 403 });
+      }
+
+      const { data: lastSample, error: lastSampleError } = await supabase
+        .from("tracker_samples")
+        .select("sample_no")
+        .eq("tracker_id", trackerId)
+        .order("sample_no", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastSampleError) {
+        return NextResponse.json({ error: lastSampleError.message }, { status: 500 });
+      }
+
+      const nextSampleNo = (lastSample?.sample_no || 0) + 1;
+      const sampleName = typeof payload?.name === "string" && payload.name.trim() ? payload.name.trim() : `Sampel ${nextSampleNo}`;
+
+      const { data: sampleRow, error: sampleError } = await supabase
+        .from("tracker_samples")
+        .insert({
+          id: crypto.randomUUID(),
+          tracker_id: trackerId,
+          sample_no: nextSampleNo,
+          name: sampleName,
+        })
+        .select("id, tracker_id, sample_no, name, created_at")
+        .single();
+
+      if (sampleError || !sampleRow) {
+        return NextResponse.json({ error: sampleError?.message || "Failed to add sample" }, { status: 500 });
+      }
+
+      return NextResponse.json({ sample: sampleRow });
+    }
+
     const title = typeof payload?.title === "string" ? payload.title.trim() : "";
     const plantType = typeof payload?.plant_type === "string" ? payload.plant_type.trim() : "";
     const rawSamples = Array.isArray(payload?.samples) ? payload.samples : [];
