@@ -104,6 +104,7 @@ export default function GrowthTrackerPage() {
               <motion.div key={card.id} variants={fadeUpVariant}>
                 <Link
                   href={`/observation/${card.id}/history`}
+                  replace
                   className="group relative block h-[360px] overflow-hidden rounded-[16px] shadow-[-6px_6px_12px_rgba(0,0,0,0.3)] transition hover:shadow-[-6px_6px_20px_rgba(0,0,0,0.5)] sm:h-[396px]"
                 >
                   <img alt={card.title} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-110" src={card.image} />

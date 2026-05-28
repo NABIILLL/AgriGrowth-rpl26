@@ -242,6 +242,7 @@ export default function History() {
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                         <Link
                           href={`/observation/${tracker.plant_type}/history?trackerId=${tracker.id}`}
+                          replace
                           className="rounded-full bg-[#365a1a] px-3 sm:px-4 py-2 text-[11px] sm:text-[12px] font-semibold text-white transition hover:bg-[#2d4915] text-center"
                         >
                           Lihat Detail →
