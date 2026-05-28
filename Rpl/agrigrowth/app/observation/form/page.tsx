@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown, Calendar, ThermometerSun, Leaf, Ruler, Scale } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -60,11 +60,19 @@ interface TrackerSampleData {
 
 export default function ObservationForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const [trackerIdFromQuery, setTrackerIdFromQuery] = useState("");
+  const [sampleIdFromQuery, setSampleIdFromQuery] = useState("");
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      setTrackerIdFromQuery(sp.get("trackerId") || "");
+      setSampleIdFromQuery(sp.get("sampleId") || "");
+    } catch (e) {
+      // ignore in non-browser environments
+    }
+  }, []);
   const { user, isLoading: userLoading } = useUser();
   const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
-  const trackerIdFromQuery = searchParams.get("trackerId") || "";
-  const sampleIdFromQuery = searchParams.get("sampleId") || "";
   
   const [formData, setFormData] = useState<FormData>({
     trackerSelect: "",
