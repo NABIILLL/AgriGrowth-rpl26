@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown, Calendar, ThermometerSun, Leaf, Ruler, Scale } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -48,10 +48,21 @@ interface TrackerData {
   created_at: string;
 }
 
+interface TrackerSampleData {
+  id: string;
+  tracker_id: string;
+  sample_no: number;
+  name: string | null;
+  created_at?: string;
+}
+
 export default function ObservationForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isLoading: userLoading } = useUser();
   const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
+  const trackerIdFromQuery = searchParams.get("trackerId") || "";
+  const sampleIdFromQuery = searchParams.get("sampleId") || "";
   
   const [formData, setFormData] = useState<FormData>({
     trackerSelect: "",
@@ -67,6 +78,7 @@ export default function ObservationForm() {
   });
 
   const [trackers, setTrackers] = useState<TrackerData[]>([]);
+  const [trackerSamples, setTrackerSamples] = useState<TrackerSampleData[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const userId = user?.id;
@@ -84,22 +96,26 @@ export default function ObservationForm() {
     const fetchTrackers = async () => {
       try {
         console.log("Fetching trackers for user:", userId);
-        const { data, error } = await supabase
-          .from("trackers")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false });
+        const response = await fetch("/api/observation/history", {
+          credentials: "include",
+        });
+        const result = await response.json();
 
-        if (error) {
-          console.error("Supabase error:", error);
-          throw error;
+        if (!response.ok) {
+          throw new Error(result?.error || "Failed to fetch trackers");
         }
-        
-        console.log("Trackers fetched:", data);
-        setTrackers(data || []);
 
-        // Set first tracker as default
-        if (data && data.length > 0) {
+        const data = result.trackers || [];
+        console.log("Trackers fetched:", data);
+        setTrackers(data);
+
+        // Preselect tracker from query when available, otherwise set first tracker as default
+        if (trackerIdFromQuery && data && data.some((tracker: TrackerData) => tracker.id === trackerIdFromQuery)) {
+          setFormData((prev) => ({
+            ...prev,
+            trackerSelect: trackerIdFromQuery,
+          }));
+        } else if (data && data.length > 0) {
           setFormData((prev) => ({
             ...prev,
             trackerSelect: data[0].id,
@@ -114,7 +130,32 @@ export default function ObservationForm() {
     };
 
     fetchTrackers();
-  }, [userId, userLoading]);
+  }, [userId, userLoading, trackerIdFromQuery]);
+
+  useEffect(() => {
+    if (!formData.trackerSelect) {
+      setTrackerSamples([]);
+      return;
+    }
+
+    const fetchTrackerSamples = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("tracker_samples")
+          .select("id, tracker_id, sample_no, name, created_at")
+          .eq("tracker_id", formData.trackerSelect)
+          .order("sample_no", { ascending: true });
+
+        if (error) throw error;
+
+        setTrackerSamples((data || []) as TrackerSampleData[]);
+      } catch (error) {
+        console.error("Error fetching tracker samples:", error);
+      }
+    };
+
+    fetchTrackerSamples();
+  }, [formData.trackerSelect]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -175,47 +216,111 @@ export default function ObservationForm() {
         return;
       }
 
-      console.log("Saving data for tracker:", selectedTracker.id);
+      const dayNumber = parseInt(formData.dayNumber);
+      const plantHeight = parseFloat(formData.plantHeight);
+      const leafCount = parseInt(formData.leafCount);
+      const branchCount = formData.branchCount ? parseInt(formData.branchCount) : 0;
+      const soilPh = parseFloat(formData.soilPh);
+      const landArea = parseFloat(formData.landArea);
+      const selectedSample = trackerSamples.find((sample) => sample.id === sampleIdFromQuery) || trackerSamples[0] || null;
+
+      if (!selectedSample) {
+        toast.error("Pilih sampel terlebih dahulu dari history", { id: "Pilih sampel terlebih dahulu dari history" });
+        setSubmitting(false);
+        return;
+      }
+
+      console.log("Saving data for tracker:", selectedTracker.id, "sample:", selectedSample.id);
       console.log("Data:", {
         tracker_id: formData.trackerSelect,
-        day_number: parseInt(formData.dayNumber),
-        plant_height: parseFloat(formData.plantHeight),
-        leaf_count: parseInt(formData.leafCount),
-        branch_count: formData.branchCount ? parseInt(formData.branchCount) : 0,
-        soil_ph: parseFloat(formData.soilPh),
+        sample_id: selectedSample.id,
+        day_number: dayNumber,
+        plant_height: plantHeight,
+        leaf_count: leafCount,
+        branch_count: branchCount,
+        soil_ph: soilPh,
         light_condition: formData.lightCondition.trim(),
         plant_condition: formData.plantCondition.trim(),
         fertilizer_type: formData.fertilizerType.trim(),
-        land_area: parseFloat(formData.landArea),
+        land_area: landArea,
       });
 
-      const { error } = await supabase
-        .from("growth_logs")
-        .insert({
-          tracker_id: formData.trackerSelect,
-          day_number: parseInt(formData.dayNumber),
-          plant_height: parseFloat(formData.plantHeight),
-          leaf_count: parseInt(formData.leafCount),
-          branch_count: formData.branchCount ? parseInt(formData.branchCount) : 0,
-          soil_ph: parseFloat(formData.soilPh),
-          light_condition: formData.lightCondition.trim(),
-          plant_condition: formData.plantCondition.trim(),
-          fertilizer_type: formData.fertilizerType.trim(),
-          land_area: parseFloat(formData.landArea),
-        })
-        .select()
-        .single();
+      const { error: sampleInsertError } = await supabase.from("growth_sample_logs").insert({
+        tracker_id: formData.trackerSelect,
+        sample_id: selectedSample.id,
+        day_number: dayNumber,
+        plant_height: plantHeight,
+        leaf_count: leafCount,
+        branch_count: branchCount,
+        soil_ph: soilPh,
+        light_condition: formData.lightCondition.trim(),
+        plant_condition: formData.plantCondition.trim(),
+        fertilizer_type: formData.fertilizerType.trim(),
+        land_area: landArea,
+      });
 
-      if (error) {
-        console.error("Supabase insert error:", error, JSON.stringify(error));
-        throw error;
+      if (sampleInsertError) {
+        console.error("Supabase sample insert error:", sampleInsertError, JSON.stringify(sampleInsertError));
+        throw sampleInsertError;
+      }
+
+      const { data: sampleRows, error: sampleRowsError } = await supabase
+        .from("growth_sample_logs")
+        .select("plant_height, leaf_count, branch_count, soil_ph, light_condition, plant_condition, fertilizer_type, land_area")
+        .eq("tracker_id", formData.trackerSelect)
+        .eq("day_number", dayNumber);
+
+      if (sampleRowsError) {
+        console.error("Supabase sample read error:", sampleRowsError, JSON.stringify(sampleRowsError));
+        throw sampleRowsError;
+      }
+
+      const avg = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+      const sampleLogs = (sampleRows || []) as Array<{ plant_height: number; leaf_count: number; branch_count: number; soil_ph: number; light_condition: string; plant_condition: string; fertilizer_type: string; land_area: number }>;
+      const aggregated = {
+        tracker_id: formData.trackerSelect,
+        day_number: dayNumber,
+        plant_height: Number(avg(sampleLogs.map((item) => Number(item.plant_height))).toFixed(2)),
+        leaf_count: Math.round(avg(sampleLogs.map((item) => Number(item.leaf_count)))),
+        branch_count: Math.round(avg(sampleLogs.map((item) => Number(item.branch_count || 0)))),
+        soil_ph: Number(avg(sampleLogs.map((item) => Number(item.soil_ph))).toFixed(2)),
+        light_condition: formData.lightCondition.trim(),
+        plant_condition: formData.plantCondition.trim(),
+        fertilizer_type: formData.fertilizerType.trim(),
+        land_area: Number(avg(sampleLogs.map((item) => Number(item.land_area))).toFixed(2)),
+      };
+
+      const { data: existingGrowth, error: existingGrowthError } = await supabase
+        .from("growth_logs")
+        .select("id")
+        .eq("tracker_id", formData.trackerSelect)
+        .eq("day_number", dayNumber)
+        .maybeSingle();
+
+      if (existingGrowthError) {
+        console.error("Supabase existing growth read error:", existingGrowthError, JSON.stringify(existingGrowthError));
+        throw existingGrowthError;
+      }
+
+      if (existingGrowth?.id) {
+        const { error: updateError } = await supabase.from("growth_logs").update(aggregated).eq("id", existingGrowth.id);
+        if (updateError) {
+          console.error("Supabase growth update error:", updateError, JSON.stringify(updateError));
+          throw updateError;
+        }
+      } else {
+        const { error: insertError } = await supabase.from("growth_logs").insert(aggregated);
+        if (insertError) {
+          console.error("Supabase growth insert error:", insertError, JSON.stringify(insertError));
+          throw insertError;
+        }
       }
 
       toast.success("Data pengamatan berhasil disimpan!", { id: "Data pengamatan berhasil disimpan!" });
-      console.log("Redirecting to:", `/observation/${selectedTracker.plant_type}/history`);
+      console.log("Redirecting to:", `/observation/${selectedTracker.plant_type}/history?trackerId=${selectedTracker.id}`);
       
-      // Redirect to history page
-      router.push(`/observation/${selectedTracker.plant_type}/history`);
+      // Redirect to history page (use replace so browser back doesn't return to the form)
+      router.replace(`/observation/${selectedTracker.plant_type}/history?trackerId=${selectedTracker.id}`);
     } catch (error: any) {
       console.error("Error saving data:", error, JSON.stringify(error));
       toast.error(`Gagal menyimpan data pengamatan: ${error?.message ?? "Unknown error"}`, { id: `Gagal menyimpan data pengamatan: ${error?.message ?? "Unknown error"}` });
@@ -316,6 +421,25 @@ export default function ObservationForm() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
+              {trackerSamples.length > 0 && (
+                <div>
+                  <label className="block text-sm font-bold text-[#365a1a] mb-2">
+                    Pilih Sampel *
+                  </label>
+                  <select
+                    value={sampleIdFromQuery || trackerSamples[0]?.id || ""}
+                    onChange={(e) => router.replace(`/observation/form?trackerId=${encodeURIComponent(formData.trackerSelect)}&sampleId=${encodeURIComponent(e.target.value)}`)}
+                    className="w-full rounded-lg border-2 border-[#365a1a] px-4 py-3 text-[#365a1a] font-medium focus:outline-none focus:ring-2 focus:ring-[#365a1a] focus:ring-offset-2"
+                  >
+                    {trackerSamples.map((sample) => (
+                      <option key={sample.id} value={sample.id}>
+                        {sample.name || `Sampel ${sample.sample_no}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Tracker Select */}
               <div>
                 <label className="block text-sm font-bold text-[#365a1a] mb-2">

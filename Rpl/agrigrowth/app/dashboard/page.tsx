@@ -518,36 +518,7 @@ export default function Dashboard() {
         </div>
       </motion.section>
 
-      <motion.section 
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, type: "spring", stiffness: 70, damping: 15 }}
-        className="mx-auto w-full max-w-[1440px] px-5 py-10 sm:px-10 lg:px-14"
-      >
-        <div className="mx-auto w-full max-w-[1295px] rounded-[30px] bg-white p-5 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.25),-6px_6px_15px_0px_rgba(0,0,0,0.25)] sm:rounded-[40px] sm:p-8">
-          <h2 className="text-center text-[34px] font-extrabold text-[#365a1a] sm:text-[40px]">
-            Create new growth tracker
-          </h2>
-
-          <form onSubmit={handleCreateTracker} className="mt-6 flex flex-col gap-5">
-            <input
-              id="tracker-title"
-              type="text"
-              placeholder="Enter tracker title..."
-              value={trackerTitle}
-              onChange={(e) => setTrackerTitle(e.target.value)}
-              className="h-[68px] w-full rounded-[34px] border-2 border-[rgba(54,90,26,0.45)] px-8 text-center text-[20px] text-[rgba(54,90,26,0.7)] outline-none placeholder:text-[rgba(54,90,26,0.5)] sm:h-[85px] sm:rounded-[40px] sm:text-[25px]"
-            />
-
-            <button
-              type="submit"
-              className="h-[68px] w-full rounded-[34px] bg-[#365a1a] text-[20px] font-semibold text-white/55 transition hover:bg-[#2d4915] sm:h-[85px] sm:rounded-[40px] sm:text-[25px]"
-            >
-              Let&apos;s go
-            </button>
-          </form>
-        </div>
-      </motion.section>
+      {/* Create new growth tracker form removed per user request */}
 
       {isPlantMenuOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-[3px]">
