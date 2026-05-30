@@ -26,6 +26,7 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
           <Link className="text-white/90 hover:text-white transition" href="/growth-tracker">Growth Tracker</Link>
           <Link className="text-white/90 hover:text-white transition" href="/weather">Weather</Link>
           <Link className="text-white/90 hover:text-white transition" href="/history">History</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/analisis-penyakit">Analisis Penyakit</Link>
         </nav>
 
         <div className="flex items-center gap-3 min-h-[48px]">
@@ -75,6 +76,7 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
               <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/growth-tracker">Growth Tracker</Link>
               <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/weather">Weather</Link>
               <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/history">History</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/analisis-penyakit">Analisis Penyakit</Link>
             </nav>
 
             <div className="mt-3 border-t border-white/10 pt-3">

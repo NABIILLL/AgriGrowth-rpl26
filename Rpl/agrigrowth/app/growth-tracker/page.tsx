@@ -71,6 +71,9 @@ export default function GrowthTrackerPage() {
           <Link href="/history" className="transition hover:opacity-80">
             History
           </Link>
+          <Link href="/analisis-penyakit" className="transition hover:opacity-80">
+            Analisis Penyakit
+          </Link>
         </nav>
 
         {!isLoading && user ? (

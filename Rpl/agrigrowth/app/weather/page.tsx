@@ -235,6 +235,9 @@ export default function WeatherInfo() {
           <Link href="/history" className={navLinkClass}>
             History
           </Link>
+          <Link href="/analisis-penyakit" className="transition hover:opacity-80">
+            Analisis Penyakit
+          </Link>
         </nav>
 
         {!isLoading ? (

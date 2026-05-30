@@ -136,6 +136,9 @@ export default function History() {
           <Link href="/history" className="hover:opacity-80 transition">
             History
           </Link>
+          <Link href="/analisis-penyakit" className="transition hover:opacity-80">
+            Analisis Penyakit
+          </Link>
         </nav>
 
         {!isLoading && (

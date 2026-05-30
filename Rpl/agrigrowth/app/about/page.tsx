@@ -61,6 +61,9 @@ export default function About() {
           <Link href="/history" className="transition hover:opacity-80">
             History
           </Link>
+          <Link href="/analisis-penyakit" className="transition hover:opacity-80">
+            Analisis Penyakit
+          </Link>
         </nav>
 
         <div className="flex items-center gap-3 min-h-[48px]">
@@ -95,6 +98,7 @@ export default function About() {
               <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/growth-tracker">Growth Tracker</Link>
               <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/weather">Weather</Link>
               <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/history">History</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/analisis-penyakit">Analisis Penyakit</Link>
             </nav>
 
             <div className="mt-3 border-t border-[#e0e0e0] pt-3">
