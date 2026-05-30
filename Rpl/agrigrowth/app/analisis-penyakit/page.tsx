@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
@@ -10,6 +10,7 @@ type JenisTanaman = "Padi" | "Jagung" | "Bawang Merah";
 
 type HasilAnalisis = {
   status: string;
+  detectedAs?: string; // ✅ apa yang terdeteksi kalau foto tidak valid
   diagnosis: string;
   tingkatKeparahan: string;
   gejala: string[];
@@ -20,7 +21,6 @@ type HasilAnalisis = {
   rawText?: string;
 };
 
-// ✅ Pakai image sama persis seperti growth-tracker
 const TANAMAN_OPTIONS: { value: JenisTanaman; desc: string; image: string }[] = [
   {
     value: "Padi",
@@ -43,6 +43,7 @@ const STATUS_COLOR: Record<string, string> = {
   Sehat: "text-green-700 bg-green-50 border-green-300",
   "Terdeteksi Penyakit": "text-red-700 bg-red-50 border-red-300",
   "Perlu Perhatian": "text-yellow-700 bg-yellow-50 border-yellow-300",
+  "Foto Tidak Valid": "text-gray-700 bg-gray-50 border-gray-300",
 };
 
 const URGENSI_COLOR: Record<string, string> = {
@@ -63,7 +64,24 @@ export default function AnalisisPenyakitPage() {
   const [isAnalisisLoading, setIsAnalisisLoading] = useState(false);
   const [hasil, setHasil] = useState<HasilAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // ✅ State untuk rate limit countdown
+  const [rateLimitCountdown, setRateLimitCountdown] = useState<number | null>(null);
+  const [rateLimitTotal, setRateLimitTotal] = useState<number>(60);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ✅ Countdown timer — berkurang setiap detik, reset ke null saat habis
+  useEffect(() => {
+    if (rateLimitCountdown === null || rateLimitCountdown <= 0) {
+      if (rateLimitCountdown === 0) setRateLimitCountdown(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setRateLimitCountdown((prev) => (prev !== null && prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [rateLimitCountdown]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -99,17 +117,43 @@ export default function AnalisisPenyakitPage() {
           const response = await fetch("/api/analisis-penyakit", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ imageBase64: base64, mimeType: imageFile.type, jenisTanaman: selectedTanaman }),
+            body: JSON.stringify({
+              imageBase64: base64,
+              mimeType: imageFile.type,
+              jenisTanaman: selectedTanaman,
+            }),
           });
+
           const data = await response.json();
+
+          // ✅ Handle 429 — tampilkan countdown dari retryAfter yang dikirim server
+          if (response.status === 429) {
+            const waitTime = data.retryAfter ?? 60;
+            setRateLimitTotal(waitTime);
+            setRateLimitCountdown(waitTime);
+            setIsAnalisisLoading(false);
+            return;
+          }
+
           if (!response.ok) {
             setError(data.error || "Terjadi kesalahan pada AI. Coba lagi.");
             setIsAnalisisLoading(false);
             return;
           }
+
           const hasilData: HasilAnalisis = data.hasil;
           if (hasilData.rawText) {
-            setHasil({ status: "Perlu Perhatian", diagnosis: "Lihat hasil lengkap di bawah", tingkatKeparahan: "-", gejala: [], penyebab: "", solusi: [], pencegahan: [], urgensi: "Pantau Saja", rawText: hasilData.rawText });
+            setHasil({
+              status: "Perlu Perhatian",
+              diagnosis: "Lihat hasil lengkap di bawah",
+              tingkatKeparahan: "-",
+              gejala: [],
+              penyebab: "",
+              solusi: [],
+              pencegahan: [],
+              urgensi: "Pantau Saja",
+              rawText: hasilData.rawText,
+            });
           } else {
             setHasil(hasilData);
           }
@@ -136,8 +180,13 @@ export default function AnalisisPenyakitPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Progress persen untuk progress bar countdown
+  const countdownProgress =
+    rateLimitCountdown !== null
+      ? Math.round((rateLimitCountdown / rateLimitTotal) * 100)
+      : 0;
+
   return (
-    // ✅ bg-[#f4f4f4] sama seperti growth-tracker
     <div className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
 
       {/* Header */}
@@ -176,7 +225,7 @@ export default function AnalisisPenyakitPage() {
             <p className="text-gray-500 mt-1 text-sm">Upload foto tanamanmu dan AI akan mendeteksi penyakit secara otomatis.</p>
           </div>
 
-          {/* Step Indicator — pakai #365a1a */}
+          {/* Step Indicator */}
           <div className="flex items-center gap-2 mb-8">
             {[{ num: 1, label: "Pilih Tanaman" }, { num: 2, label: "Upload Foto" }, { num: 3, label: "Hasil Analisis" }].map((s, i) => (
               <div key={s.num} className="flex items-center gap-2 flex-1">
@@ -189,7 +238,7 @@ export default function AnalisisPenyakitPage() {
             ))}
           </div>
 
-          {/* STEP 1 — Card tanaman pakai image + green overlay seperti growth-tracker */}
+          {/* STEP 1 — Pilih Tanaman */}
           <div className="bg-white rounded-2xl shadow-sm border border-[#d9d9d9] p-6 mb-4">
             <h2 className="font-semibold text-gray-700 mb-4">1. Pilih Jenis Tanaman</h2>
             <div className="grid grid-cols-3 gap-3">
@@ -203,16 +252,8 @@ export default function AnalisisPenyakitPage() {
                       : "shadow-md hover:shadow-[-4px_4px_16px_rgba(0,0,0,0.2)]"
                   }`}
                 >
-                  <img
-                    alt={t.value}
-                    src={t.image}
-                    className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
-                  />
-                  {/* Green overlay — sama seperti growth-tracker */}
-                  <div className={`absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-[#365a1a] to-transparent transition duration-300 ${
-                    selectedTanaman === t.value ? "opacity-100" : "opacity-70 group-hover:opacity-90"
-                  }`} />
-                  {/* Centang kalau dipilih */}
+                  <img alt={t.value} src={t.image} className="h-full w-full object-cover transition duration-500 group-hover:scale-110" />
+                  <div className={`absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-[#365a1a] to-transparent transition duration-300 ${selectedTanaman === t.value ? "opacity-100" : "opacity-70 group-hover:opacity-90"}`} />
                   {selectedTanaman === t.value && (
                     <div className="absolute top-2 right-2 bg-white rounded-full w-5 h-5 flex items-center justify-center shadow">
                       <span className="text-[#365a1a] text-xs font-bold">✓</span>
@@ -234,7 +275,12 @@ export default function AnalisisPenyakitPage() {
               <div className="relative">
                 <Image src={imagePreview} alt="Preview tanaman" width={600} height={300} className="w-full h-56 object-cover rounded-xl" />
                 <button
-                  onClick={() => { setImageFile(null); setImagePreview(null); setStep(1); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                  onClick={() => {
+                    setImageFile(null);
+                    setImagePreview(null);
+                    setStep(1);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
                   className="absolute top-2 right-2 bg-white rounded-full p-1 shadow text-gray-600 hover:text-red-500 text-sm"
                 >✕</button>
                 <div className="mt-2 text-xs text-gray-400 text-center">
@@ -254,14 +300,41 @@ export default function AnalisisPenyakitPage() {
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleImageChange} className="hidden" />
           </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-4 mb-4 text-sm">⚠️ {error}</div>
+          {/* ✅ Rate Limit Banner dengan countdown + progress bar */}
+          {rateLimitCountdown !== null && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <span className="text-xl mt-0.5">⏱️</span>
+                <div className="flex-1">
+                  <p className="font-semibold text-amber-800 text-sm">AI sedang istirahat sejenak</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    Batas permintaan gratis tercapai. Tombol akan aktif kembali dalam{" "}
+                    <span className="font-bold">{rateLimitCountdown} detik</span>.
+                  </p>
+                  {/* Progress bar */}
+                  <div className="mt-2 h-1.5 bg-amber-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-500 rounded-full transition-all duration-1000"
+                      style={{ width: `${countdownProgress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
+          {/* Error biasa */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-4 mb-4 text-sm">
+              ⚠️ {error}
+            </div>
+          )}
+
+          {/* Tombol Analisis */}
           {step === 2 && imageFile && selectedTanaman && (
             <button
               onClick={handleAnalisis}
-              disabled={isAnalisisLoading}
+              disabled={isAnalisisLoading || rateLimitCountdown !== null}
               className="w-full bg-[#365a1a] hover:bg-[#2d4915] text-white font-semibold py-4 rounded-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isAnalisisLoading ? (
@@ -272,32 +345,59 @@ export default function AnalisisPenyakitPage() {
                   </svg>
                   Menganalisis dengan AI...
                 </>
-              ) : "Mulai Analisis"}
+              ) : rateLimitCountdown !== null ? (
+                // ✅ Tampilkan countdown di dalam tombol
+                `⏳ Coba lagi dalam ${rateLimitCountdown}s`
+              ) : (
+                "Mulai Analisis"
+              )}
             </button>
           )}
 
-          {/* STEP 3 — Hasil: status tetap berwarna, sisanya putih/netral */}
+          {/* STEP 3 — Hasil Analisis */}
           {step === 3 && hasil && (
             <div className="space-y-4">
 
-              {/* Status — tetap pakai warna merah/hijau/kuning */}
-              <div className={`rounded-2xl border-2 p-5 ${STATUS_COLOR[hasil.status] || "bg-gray-50 border-gray-200"}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs font-medium uppercase tracking-wide opacity-70">Status Tanaman</div>
-                    <div className="text-xl font-bold mt-0.5">{hasil.status}</div>
-                    <div className="text-lg font-semibold mt-1">{hasil.diagnosis}</div>
-                    {hasil.tingkatKeparahan && hasil.tingkatKeparahan !== "Tidak Ada" && hasil.tingkatKeparahan !== "-" && (
-                      <div className="text-sm mt-1 opacity-80">Keparahan: {hasil.tingkatKeparahan}</div>
-                    )}
+              {/* ✅ Banner foto tidak valid — tampilkan detectedAs */}
+              {hasil.status === "Foto Tidak Valid" && (
+                <div className="bg-orange-50 border border-orange-200 rounded-2xl p-5">
+                  <div className="flex gap-3 items-start">
+                    <span className="text-2xl">📷</span>
+                    <div>
+                      <p className="font-semibold text-orange-800">Foto tidak dapat dianalisis</p>
+                      {hasil.detectedAs && (
+                        <p className="text-sm text-orange-700 mt-1">
+                          <span className="font-medium">Terdeteksi sebagai:</span> {hasil.detectedAs}
+                        </p>
+                      )}
+                      <p className="text-sm text-orange-600 mt-1">
+                        Silakan upload foto <span className="font-semibold">{selectedTanaman}</span> yang sesuai.
+                      </p>
+                    </div>
                   </div>
-                  <span className={`text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap ${URGENSI_COLOR[hasil.urgensi] || "bg-gray-400 text-white"}`}>
-                    {hasil.urgensi}
-                  </span>
                 </div>
-              </div>
+              )}
 
-              {/* Gejala — putih, netral */}
+              {/* Status card — sembunyikan kalau foto tidak valid (sudah ada banner di atas) */}
+              {hasil.status !== "Foto Tidak Valid" && (
+                <div className={`rounded-2xl border-2 p-5 ${STATUS_COLOR[hasil.status] || "bg-gray-50 border-gray-200"}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-medium uppercase tracking-wide opacity-70">Status Tanaman</div>
+                      <div className="text-xl font-bold mt-0.5">{hasil.status}</div>
+                      <div className="text-lg font-semibold mt-1">{hasil.diagnosis}</div>
+                      {hasil.tingkatKeparahan && hasil.tingkatKeparahan !== "Tidak Ada" && hasil.tingkatKeparahan !== "-" && (
+                        <div className="text-sm mt-1 opacity-80">Keparahan: {hasil.tingkatKeparahan}</div>
+                      )}
+                    </div>
+                    <span className={`text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap ${URGENSI_COLOR[hasil.urgensi] || "bg-gray-400 text-white"}`}>
+                      {hasil.urgensi}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Gejala */}
               {hasil.gejala && hasil.gejala.length > 0 && (
                 <div className="bg-white rounded-2xl border border-[#d9d9d9] shadow-sm p-5">
                   <h3 className="font-semibold text-gray-700 mb-3">Gejala yang Terdeteksi</h3>
@@ -311,18 +411,20 @@ export default function AnalisisPenyakitPage() {
                 </div>
               )}
 
-              {/* Penyebab — putih, netral */}
-              {hasil.penyebab && (
+              {/* Penyebab — sembunyikan kalau foto tidak valid */}
+              {hasil.penyebab && hasil.status !== "Foto Tidak Valid" && (
                 <div className="bg-white rounded-2xl border border-[#d9d9d9] shadow-sm p-5">
                   <h3 className="font-semibold text-gray-700 mb-2">Penyebab</h3>
                   <p className="text-sm text-gray-600">{hasil.penyebab}</p>
                 </div>
               )}
 
-              {/* Solusi — putih, nomor pakai #365a1a */}
+              {/* Solusi / Tips upload */}
               {hasil.solusi && hasil.solusi.length > 0 && (
                 <div className="bg-white rounded-2xl border border-[#d9d9d9] shadow-sm p-5">
-                  <h3 className="font-semibold text-gray-700 mb-3">Langkah Penanganan</h3>
+                  <h3 className="font-semibold text-gray-700 mb-3">
+                    {hasil.status === "Foto Tidak Valid" ? "Tips Upload Foto yang Benar" : "Langkah Penanganan"}
+                  </h3>
                   <ol className="space-y-2">
                     {hasil.solusi.map((s, i) => (
                       <li key={i} className="flex gap-3 text-sm text-gray-600">
@@ -334,7 +436,7 @@ export default function AnalisisPenyakitPage() {
                 </div>
               )}
 
-              {/* Pencegahan — putih, netral */}
+              {/* Pencegahan */}
               {hasil.pencegahan && hasil.pencegahan.length > 0 && (
                 <div className="bg-white rounded-2xl border border-[#d9d9d9] shadow-sm p-5">
                   <h3 className="font-semibold text-gray-700 mb-3">Saran ke Depan</h3>
@@ -355,16 +457,19 @@ export default function AnalisisPenyakitPage() {
                 </div>
               )}
 
-              <p className="text-xs text-gray-400 text-center px-4">
-                ⚠️ Hasil ini merupakan estimasi AI dan bukan pengganti konsultasi dengan ahli pertanian.
-              </p>
+              {hasil.status !== "Foto Tidak Valid" && (
+                <p className="text-xs text-gray-400 text-center px-4">
+                  ⚠️ Hasil ini merupakan estimasi AI dan bukan pengganti konsultasi dengan ahli pertanian.
+                </p>
+              )}
 
               <button
                 onClick={handleReset}
                 className="w-full border-2 border-[#365a1a] text-[#365a1a] font-semibold py-3.5 rounded-xl hover:bg-[#f0f5ea] transition-all"
               >
-                🔄 Analisis Tanaman Lain
+                {hasil.status === "Foto Tidak Valid" ? "🔄 Upload Foto Ulang" : "🔄 Analisis Tanaman Lain"}
               </button>
+
             </div>
           )}
 
