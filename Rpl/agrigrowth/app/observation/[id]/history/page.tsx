@@ -18,6 +18,8 @@ import {
   ResponsiveContainer
 } from "recharts";
 import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 import * as htmlToImage from "html-to-image";
 import { motion, Variants } from "framer-motion";
 
@@ -149,6 +151,7 @@ export default function ObservationHistoryPage() {
   const { user, isLoading } = useUser();
   const userId = user?.id;
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const params = useParams();
   const id = (params as any)?.id as string | undefined;
   const { session } = useSession();
@@ -1000,67 +1003,237 @@ export default function ObservationHistoryPage() {
       toast.error("Anda harus login untuk export PDF", { id: "Anda harus login untuk export PDF" });
       return;
     }
-    const element = document.getElementById("pdf-content");
-    if (!element) {
-      toast.error("Tidak ada konten untuk di-export", { id: "Tidak ada konten untuk di-export" });
+    if (logsRaw.length === 0 && costs.length === 0) {
+      toast.error("Tidak ada data untuk di-export", { id: "Tidak ada data untuk di-export" });
       return;
     }
 
     setIsExporting(true);
-    const toastId = toast.loading("Menyiapkan dan mengunggah PDF...");
+    const toastId = toast.loading("Menyiapkan Transkrip PDF...");
 
     try {
-      // Use toJpeg to reduce file size (quality 0.8 is usually a good balance)
-      const dataUrl = await htmlToImage.toJpeg(element, { 
-        quality: 0.8, 
-        pixelRatio: 1.5,
-        backgroundColor: '#f4f4f4', // to ensure no black backgrounds on transparent areas
-      });
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       
-      const pdfWidth = 210; // A4 width in mm
-      // Calculate dynamic height based on the full scrollHeight of the container
-      const pdfHeight = (element.scrollHeight * pdfWidth) / element.scrollWidth;
+      // Header
+      doc.setFontSize(18);
+      doc.setTextColor(54, 90, 26);
+      doc.text("Laporan Monitor Pertanian - AgriGrowth", 14, 20);
       
-      // Create a PDF with a custom height so it fits exactly one long continuous page
-      const pdf = new jsPDF({
-        orientation: "p",
-        unit: "mm",
-        format: [pdfWidth, pdfHeight]
-      });
-      
-      pdf.addImage(dataUrl, "JPEG", 0, 0, pdfWidth, pdfHeight);
-      
-      const pdfBlob = pdf.output("blob");
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(`Lahan: ${trackerTitle}`, 14, 28);
+      doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 34);
 
+      let finalY = 40;
+
+      // Ringkasan Pertumbuhan (if exists)
+      if (logsRaw.length > 0) {
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text("Ringkasan Pertumbuhan", 14, finalY);
+        finalY += 8;
+
+        doc.setFontSize(10);
+        doc.text(`Tinggi Awal: ${stats.startHeight} cm | Akhir: ${stats.endHeight} cm | Rata-rata: ${stats.avgHeightGrowth.toFixed(2)} cm/hari`, 14, finalY);
+        finalY += 6;
+        doc.text(`Daun Awal: ${stats.startLeaf} helai | Akhir: ${stats.endLeaf} helai | Rata-rata: ${stats.avgLeafGrowth.toFixed(2)} helai/hari`, 14, finalY);
+        finalY += 10;
+
+        const tableColumn = ["Hari Ke", "Tinggi (cm)", "Jml Daun", "Cabang", "pH Tanah", "Pupuk", "Luas Lahan"];
+        const tableRows = logsRaw.map(log => [
+          log.day_number.toString(),
+          log.plant_height?.toString() || "-",
+          log.leaf_count?.toString() || "-",
+          log.branch_count?.toString() || "-",
+          log.soil_ph?.toString() || "-",
+          log.fertilizer_type || "-",
+          log.land_area?.toString() || "-"
+        ]);
+
+        autoTable(doc, {
+          startY: finalY,
+          head: [tableColumn],
+          body: tableRows,
+          theme: 'striped',
+          headStyles: { fillColor: [54, 90, 26] },
+          margin: { left: 14, right: 14 }
+        });
+        
+        finalY = (doc as any).lastAutoTable.finalY + 15;
+
+        // Rincian Per Sampel
+        if (sampleLogsRaw && sampleLogsRaw.length > 0) {
+          if (finalY > 250) {
+            doc.addPage();
+            finalY = 20;
+          }
+          doc.setFontSize(14);
+          doc.setTextColor(0);
+          doc.text("Rincian Data Per Sampel", 14, finalY);
+          finalY += 8;
+
+          const sampleColumn = ["Sampel", "Hari", "Tinggi", "Daun", "Cabang", "pH", "Pupuk"];
+          const sampleRowsPDF = sampleLogsRaw.map(log => {
+            const sample = trackerSamples.find(s => String(s.id) === String(log.sample_id));
+            const sampleName = sample ? (sample.name || `Sampel ${sample.sample_no}`) : "Sampel";
+            return [
+              sampleName,
+              log.day_number.toString(),
+              log.plant_height?.toString() || "-",
+              log.leaf_count?.toString() || "-",
+              log.branch_count?.toString() || "-",
+              log.soil_ph?.toString() || "-",
+              log.fertilizer_type || "-"
+            ];
+          });
+
+          autoTable(doc, {
+            startY: finalY,
+            head: [sampleColumn],
+            body: sampleRowsPDF,
+            theme: 'striped',
+            headStyles: { fillColor: [97, 174, 37] },
+            margin: { left: 14, right: 14 }
+          });
+          
+          finalY = (doc as any).lastAutoTable.finalY + 15;
+        }
+      }
+
+      // Tabel Biaya
+      if (costs.length > 0) {
+        if (finalY > 250) {
+          doc.addPage();
+          finalY = 20;
+        }
+
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text("Laporan Pengelolaan Biaya", 14, finalY);
+        finalY += 8;
+
+        const costColumn = ["Tanggal", "Kategori", "Keterangan", "Nominal (Rp)"];
+        const costRows = costs.map(cost => [
+          new Date(cost.date).toLocaleDateString('id-ID'),
+          cost.category,
+          cost.description || "-",
+          cost.amount.toLocaleString('id-ID')
+        ]);
+
+        autoTable(doc, {
+          startY: finalY,
+          head: [costColumn],
+          body: costRows,
+          theme: 'grid',
+          headStyles: { fillColor: [54, 90, 26] },
+          margin: { left: 14, right: 14 }
+        });
+        
+        finalY = (doc as any).lastAutoTable.finalY + 10;
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Total Pengeluaran: Rp ${totalCost.toLocaleString('id-ID')}`, 14, finalY);
+      }
+
+      // Save PDF
       const d = new Date();
       const dd = String(d.getDate()).padStart(2, '0');
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const yy = String(d.getFullYear()).slice(-2);
       const dateStr = `${dd}${mm}${yy}`;
       const baseFileName = `Laporan_${trackerTitle}_${dateStr}.pdf`;
-      const fileName = `${userId}/${baseFileName}`;
       
-      const { data, error } = await supabase
-        .storage
-        .from("agrigrowthpdf")
-        .upload(fileName, pdfBlob, {
-          contentType: "application/pdf",
-          upsert: true
-        });
+      doc.save(baseFileName);
 
-      if (error) {
-        throw error;
+      try {
+        const pdfBlob = doc.output("blob");
+        const fileName = `${userId}/${baseFileName}`;
+        await supabase.storage.from("agrigrowthpdf").upload(fileName, pdfBlob, { contentType: "application/pdf", upsert: true });
+      } catch (err) {
+        console.warn("Gagal upload ke supabase storage, tapi file sudah terunduh lokal:", err);
       }
 
-      // Automatically download the file to the user's device
-      pdf.save(baseFileName);
-
-      toast.success("PDF berhasil diunduh dan disimpan!", { id: toastId });
+      toast.success("Transkrip PDF berhasil diunduh!", { id: toastId });
     } catch (err: any) {
       console.error("Export PDF Error:", err);
-      toast.error(`Gagal menyimpan PDF: ${err.message}`, { id: toastId });
+      toast.error(`Gagal membuat PDF: ${err.message}`, { id: toastId });
     } finally {
       setIsExporting(false);
+      setShowExportMenu(false);
+    }
+  }
+
+  function handleExportExcel() {
+    if (logsRaw.length === 0 && costs.length === 0) {
+      toast.error("Tidak ada data untuk di-export");
+      return;
+    }
+
+    try {
+      const wb = XLSX.utils.book_new();
+
+      if (logsRaw.length > 0) {
+        const growthData = logsRaw.map(log => ({
+          "Hari Ke": log.day_number,
+          "Tinggi Tanaman (cm)": log.plant_height,
+          "Jumlah Daun": log.leaf_count,
+          "Jumlah Cabang": log.branch_count,
+          "pH Tanah": log.soil_ph,
+          "Kondisi Cahaya": log.light_condition,
+          "Kondisi Tanaman": log.plant_condition,
+          "Jenis Pupuk": log.fertilizer_type,
+          "Luas Lahan (Ha)": log.land_area
+        }));
+        const wsGrowth = XLSX.utils.json_to_sheet(growthData);
+        XLSX.utils.book_append_sheet(wb, wsGrowth, "Pertumbuhan");
+
+        if (sampleLogsRaw && sampleLogsRaw.length > 0) {
+          const sampleData = sampleLogsRaw.map(log => {
+            const sample = trackerSamples.find(s => String(s.id) === String(log.sample_id));
+            const sampleName = sample ? (sample.name || `Sampel ${sample.sample_no}`) : "Sampel";
+            return {
+              "Sampel": sampleName,
+              "Hari Ke": log.day_number,
+              "Tinggi Tanaman (cm)": log.plant_height,
+              "Jumlah Daun": log.leaf_count,
+              "Jumlah Cabang": log.branch_count,
+              "pH Tanah": log.soil_ph,
+              "Kondisi Cahaya": log.light_condition,
+              "Kondisi Tanaman": log.plant_condition,
+              "Jenis Pupuk": log.fertilizer_type,
+              "Luas Lahan (Ha)": log.land_area
+            };
+          });
+          const wsSample = XLSX.utils.json_to_sheet(sampleData);
+          XLSX.utils.book_append_sheet(wb, wsSample, "Detail Sampel");
+        }
+      }
+
+      if (costs.length > 0) {
+        const costsData = costs.map(cost => ({
+          "Tanggal": new Date(cost.date).toLocaleDateString('id-ID'),
+          "Kategori": cost.category,
+          "Keterangan": cost.description,
+          "Nominal (Rp)": cost.amount
+        }));
+        const wsCost = XLSX.utils.json_to_sheet(costsData);
+        XLSX.utils.book_append_sheet(wb, wsCost, "Biaya");
+      }
+
+      const d = new Date();
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yy = String(d.getFullYear()).slice(-2);
+      const dateStr = `${dd}${mm}${yy}`;
+      
+      XLSX.writeFile(wb, `Data_${trackerTitle}_${dateStr}.xlsx`);
+      toast.success("Excel berhasil diunduh!");
+    } catch (err: any) {
+      console.error("Export Excel Error:", err);
+      toast.error("Gagal membuat Excel");
+    } finally {
+      setShowExportMenu(false);
     }
   }
 
@@ -1116,13 +1289,26 @@ export default function ObservationHistoryPage() {
             >
               ➕ Input
             </button>
-            <button 
-              onClick={handleExportPDF}
-              disabled={isExporting || !selectedTrackerId || chartData.length === 0}
-              className="rounded-full bg-white px-3 sm:px-6 py-1.5 sm:py-2.5 text-[11px] sm:text-sm font-bold shadow-md border border-[#365a1a]/20 hover:bg-gray-50 hover:shadow-lg transition disabled:opacity-50"
-            >
-              {isExporting ? "..." : "📥 Export"}
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                disabled={isExporting || !selectedTrackerId || (logsRaw.length === 0 && costs.length === 0)}
+                className="rounded-full bg-white px-3 sm:px-6 py-1.5 sm:py-2.5 text-[11px] sm:text-sm font-bold shadow-md border border-[#365a1a]/20 hover:bg-gray-50 hover:shadow-lg transition disabled:opacity-50"
+              >
+                {isExporting ? "Memproses..." : "📥 Export"}
+              </button>
+              
+              {showExportMenu && (
+                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 shadow-xl rounded-xl w-48 py-2 z-50 overflow-hidden">
+                  <button onClick={handleExportPDF} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 font-semibold text-[#365a1a]">
+                    📄 Export Laporan PDF
+                  </button>
+                  <button onClick={handleExportExcel} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 font-semibold text-[#365a1a]">
+                    📊 Export Data Excel
+                  </button>
+                </div>
+              )}
+            </div>
             <button className="rounded-full bg-white px-3 sm:px-6 py-1.5 sm:py-2.5 text-[11px] sm:text-sm font-bold shadow-md border border-[#365a1a]/20 hover:bg-gray-50 hover:shadow-lg transition">
               📤
             </button>
