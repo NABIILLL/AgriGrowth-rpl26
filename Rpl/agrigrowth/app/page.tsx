@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import HeaderWithModal from "@/components/HeaderWithModal";
 import { motion, Variants } from "framer-motion";
 import { useAuth, useClerk } from "@clerk/nextjs";
+import { useUser } from "@/hooks/useUser";
 
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
@@ -26,16 +27,23 @@ const fadeUpVariant: Variants = {
 };
 
 const heroBackground =
-  "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?q=80&w=2400&auto=format&fit=crop";
+  "/foto%20dashboard.png";
 
 export default function Home() {
   const { isSignedIn } = useAuth();
   const { openSignIn } = useClerk();
   const router = useRouter();
+  const { user, isLoading } = useUser();
+
+  useEffect(() => {
+    if (!isLoading && isSignedIn && user?.role === "admin") {
+      router.replace("/admin");
+    }
+  }, [isLoading, isSignedIn, router, user]);
 
   const handleGetStarted = () => {
     if (isSignedIn) {
-      router.push("/dashboard");
+      router.push(user?.role === "admin" ? "/admin" : "/growth-tracker");
     } else {
       openSignIn();
     }

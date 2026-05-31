@@ -13,6 +13,20 @@ type Observation = {
   day_number: number;
   plant_height?: number | null;
   leaf_count?: number | null;
+  branch_count?: number | null;
+  soil_ph?: number | null;
+  light_condition?: string | null;
+  plant_condition?: string | null;
+  fertilizer_type?: string | null;
+  land_area?: number | null;
+  created_at?: string | null;
+};
+
+type TrackerSample = {
+  id: string;
+  tracker_id: string;
+  sample_no: number;
+  name: string;
   created_at?: string | null;
 };
 
@@ -21,10 +35,18 @@ const emptyForm = {
   day_number: "",
   plant_height: "",
   leaf_count: "",
+  branch_count: "",
+  soil_ph: "",
+  light_condition: "",
+  plant_condition: "",
+  fertilizer_type: "",
+  land_area: "",
 };
 
 export default function AdminObservationsPage() {
   const [observations, setObservations] = useState<Observation[]>([]);
+  const [growthSampleLogs, setGrowthSampleLogs] = useState<any[]>([]);
+  const [trackerSamples, setTrackerSamples] = useState<TrackerSample[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
@@ -43,7 +65,9 @@ export default function AdminObservationsPage() {
         adminFetch("/api/admin/users"),
         adminFetch("/api/admin/trackers")
       ]);
-      setObservations(observationData.observations || []);
+      setObservations(observationData.growth_logs || observationData.observations || []);
+      setGrowthSampleLogs(observationData.growth_sample_logs || []);
+      setTrackerSamples(observationData.tracker_samples || []);
 
       const profiles = userData.profiles || [];
       const users = userData.users || [];
@@ -92,6 +116,12 @@ export default function AdminObservationsPage() {
         day_number: Number(form.day_number),
         plant_height: form.plant_height ? Number(form.plant_height) : null,
         leaf_count: form.leaf_count ? Number(form.leaf_count) : null,
+        branch_count: form.branch_count ? Number(form.branch_count) : null,
+        soil_ph: form.soil_ph ? Number(form.soil_ph) : null,
+        light_condition: form.light_condition || null,
+        plant_condition: form.plant_condition || null,
+        fertilizer_type: form.fertilizer_type || null,
+        land_area: form.land_area ? Number(form.land_area) : null,
       };
 
       if (editingId) {
@@ -122,6 +152,12 @@ export default function AdminObservationsPage() {
       day_number: String(item.day_number),
       plant_height: item.plant_height?.toString() || "",
       leaf_count: item.leaf_count?.toString() || "",
+      branch_count: item.branch_count?.toString() || "",
+      soil_ph: item.soil_ph?.toString() || "",
+      light_condition: item.light_condition || "",
+      plant_condition: item.plant_condition || "",
+      fertilizer_type: item.fertilizer_type || "",
+      land_area: item.land_area?.toString() || "",
     });
   };
 
@@ -141,8 +177,8 @@ export default function AdminObservationsPage() {
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">Kelola Observasi</div>
-          <div className="page-sub">Monitoring input data harian dan validasi data lapangan</div>
+          <div className="page-title">Kelola Growth Logs</div>
+          <div className="page-sub">Monitoring tabel growth_logs, growth_sample_logs, dan tracker_samples</div>
         </div>
         <div className="header-actions">
           <button className="btn btn-ghost" onClick={() => setForm({ ...emptyForm })}><i className="ti ti-refresh"></i> Reset</button>
@@ -159,28 +195,36 @@ export default function AdminObservationsPage() {
       <div className="grid-equal" style={{ marginBottom: 14 }}>
         <div className="panel">
           <div className="panel-header">
-            <div className="panel-title"><i className="ti ti-notes"></i> Ringkasan Observasi</div>
+            <div className="panel-title"><i className="ti ti-notes"></i> Ringkasan Growth Logs</div>
           </div>
           <div className="stat-inline">
-            <div className="stat-cell"><div className="stat-cell-num">{observations.length}</div><div className="stat-cell-lbl">Total</div></div>
+            <div className="stat-cell"><div className="stat-cell-num">{observations.length}</div><div className="stat-cell-lbl">Growth Logs</div></div>
+            <div className="stat-cell"><div className="stat-cell-num">{growthSampleLogs.length}</div><div className="stat-cell-lbl">Sample Logs</div></div>
+            <div className="stat-cell"><div className="stat-cell-num">{trackerSamples.length}</div><div className="stat-cell-lbl">Tracker Samples</div></div>
           </div>
         </div>
         <div className="panel">
           <div className="panel-header">
-            <div className="panel-title"><i className="ti ti-edit"></i> Form Observasi</div>
+            <div className="panel-title"><i className="ti ti-edit"></i> Form Growth Log</div>
           </div>
           <div style={{ padding: "14px 16px", display: "grid", gap: 10 }}>
             <input className="form-input" placeholder="tracker_id" value={form.tracker_id} onChange={(e) => setForm({ ...form, tracker_id: e.target.value })} />
             <input className="form-input" placeholder="Hari ke" value={form.day_number} onChange={(e) => setForm({ ...form, day_number: e.target.value })} />
             <input className="form-input" placeholder="Tinggi tanaman" value={form.plant_height} onChange={(e) => setForm({ ...form, plant_height: e.target.value })} />
             <input className="form-input" placeholder="Jumlah daun" value={form.leaf_count} onChange={(e) => setForm({ ...form, leaf_count: e.target.value })} />
+            <input className="form-input" placeholder="Jumlah cabang" value={form.branch_count} onChange={(e) => setForm({ ...form, branch_count: e.target.value })} />
+            <input className="form-input" placeholder="pH tanah" value={form.soil_ph} onChange={(e) => setForm({ ...form, soil_ph: e.target.value })} />
+            <input className="form-input" placeholder="Kondisi cahaya" value={form.light_condition} onChange={(e) => setForm({ ...form, light_condition: e.target.value })} />
+            <input className="form-input" placeholder="Kondisi tanaman" value={form.plant_condition} onChange={(e) => setForm({ ...form, plant_condition: e.target.value })} />
+            <input className="form-input" placeholder="Jenis pupuk" value={form.fertilizer_type} onChange={(e) => setForm({ ...form, fertilizer_type: e.target.value })} />
+            <input className="form-input" placeholder="Luas lahan" value={form.land_area} onChange={(e) => setForm({ ...form, land_area: e.target.value })} />
           </div>
         </div>
       </div>
 
       <div className="panel">
         <div className="panel-header">
-          <div className="panel-title"><i className="ti ti-list"></i> Daftar Observasi</div>
+          <div className="panel-title"><i className="ti ti-list"></i> Daftar Growth Logs</div>
           <div className="panel-actions">
             <button className="mini-btn" onClick={loadObservations}>Refresh</button>
           </div>
@@ -189,36 +233,39 @@ export default function AdminObservationsPage() {
           <table>
             <thead>
               <tr>
-                <th>User</th>
                 <th>Tracker ID</th>
                 <th>Hari Ke-</th>
                 <th>Tinggi</th>
                 <th>Daun</th>
+                <th>Cabang</th>
+                <th>pH</th>
+                <th>Cahaya</th>
+                <th>Kondisi</th>
+                <th>Pupuk</th>
+                <th>Luas</th>
                 <th>Waktu</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6}>Loading...</td></tr>
+                <tr><td colSpan={11}>Loading...</td></tr>
               ) : observations.length === 0 ? (
-                <tr><td colSpan={6}>Belum ada data</td></tr>
+                <tr><td colSpan={11}>Belum ada data</td></tr>
               ) : (
                 observations.map((item) => {
-                  const userId = trackerUserMap.get(item.tracker_id);
-                  const userName = userId ? profileMap.get(userId) : "Unknown";
                   return (
                     <tr key={item.id}>
-                      <td style={{ fontWeight: 600 }}>
-                        <div className="td-name">
-                          <div className="avatar-sm" style={{ width: 24, height: 24, fontSize: 10 }}>{userName?.slice(0, 2).toUpperCase() || "?"}</div>
-                          {userName}
-                        </div>
-                      </td>
                       <td style={{ color: "var(--text4)", fontSize: "12px" }}>{item.tracker_id.slice(0, 8)}...</td>
                       <td>{item.day_number}</td>
                       <td>{item.plant_height ?? "-"}</td>
                       <td>{item.leaf_count ?? "-"}</td>
+                      <td>{item.branch_count ?? "-"}</td>
+                      <td>{item.soil_ph ?? "-"}</td>
+                      <td>{item.light_condition ?? "-"}</td>
+                      <td>{item.plant_condition ?? "-"}</td>
+                      <td>{item.fertilizer_type ?? "-"}</td>
+                      <td>{item.land_area ?? "-"}</td>
                       <td style={{ color: "var(--text4)" }}>{item.created_at?.split("T")[0] || "-"}</td>
                       <td>
                         <button className="mini-btn" onClick={() => handleEdit(item)}>Edit</button>
@@ -227,6 +274,40 @@ export default function AdminObservationsPage() {
                     </tr>
                   );
                 })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="panel" style={{ marginTop: 14 }}>
+        <div className="panel-header">
+          <div className="panel-title"><i className="ti ti-database"></i> Daftar Tracker Samples</div>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tracker ID</th>
+                <th>Sampel Ke-</th>
+                <th>Nama Sampel</th>
+                <th>Waktu</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={4}>Loading...</td></tr>
+              ) : trackerSamples.length === 0 ? (
+                <tr><td colSpan={4}>Belum ada data</td></tr>
+              ) : (
+                trackerSamples.map((sample) => (
+                  <tr key={sample.id}>
+                    <td style={{ color: "var(--text4)", fontSize: "12px" }}>{sample.tracker_id.slice(0, 8)}...</td>
+                    <td>{sample.sample_no}</td>
+                    <td>{sample.name || "-"}</td>
+                    <td style={{ color: "var(--text4)" }}>{sample.created_at?.split("T")[0] || "-"}</td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>

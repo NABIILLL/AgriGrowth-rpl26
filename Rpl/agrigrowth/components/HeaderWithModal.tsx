@@ -18,19 +18,21 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
   return (
     <>
       <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
-        <AgrigrowthLogo />
+        <AgrigrowthLogo imageSrc="/logo%201.png" showText={false} className="h-10 w-[170px] sm:h-11 sm:w-[190px]" />
 
-        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex opacity-90">
+        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-6 text-[15px] xl:text-[16px] font-bold lg:flex whitespace-nowrap opacity-90">
           <Link className="text-white/90 hover:text-white transition" href="/">Home</Link>
           <Link className="text-white/90 hover:text-white transition" href="/about">About</Link>
-          <Link className="text-white/90 hover:text-white transition" href="/wireframe4">Features</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/growth-tracker">Growth Tracker</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/weather">Weather</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/history">History</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/analisis-penyakit">Analisis Penyakit</Link>
         </nav>
 
         <div className="flex items-center gap-3 min-h-[48px]">
           <div className="hidden lg:flex items-center gap-3">
             {isLoaded && isSignedIn && (
               <UserButton 
-                afterSignOutUrl="/"
                 appearance={{
                   elements: {
                     userButtonAvatarBox: "w-10 h-10 shadow-md",
@@ -71,13 +73,16 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
             <nav className="flex flex-col gap-3">
               <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/">Home</Link>
               <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/about">About</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/wireframe4">Features</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/growth-tracker">Growth Tracker</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/weather">Weather</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/history">History</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/analisis-penyakit">Analisis Penyakit</Link>
             </nav>
 
             <div className="mt-3 border-t border-white/10 pt-3">
               {isLoaded && isSignedIn && (
                 <div className="flex flex-col gap-2 mt-2 items-start">
-                  <UserButton afterSignOutUrl="/" showName={true} />
+                  <UserButton showName={true} />
                 </div>
               )}
               {isLoaded && !isSignedIn && (

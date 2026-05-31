@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { useUser, type UserProfile } from "@/hooks/useUser";
 
 type ProfileForm = {
@@ -58,6 +57,26 @@ const withTimeout = async <T,>(promise: PromiseLike<T>, timeoutMs = 15000) => {
   } finally {
     clearTimeout(timeoutId!);
   }
+};
+
+const saveAdminProfile = async (payload: ProfileForm) => {
+  const response = await withTimeout(
+    fetch("/api/profile", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    }),
+    12000
+  );
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result?.error || `Request failed (${response.status})`);
+  }
+
+  return result?.profile as UserProfile;
 };
 
 const normalizeIndonesianPhone = (rawValue?: string | null) => {
@@ -130,48 +149,21 @@ function AdminProfileForm({ user }: { user: UserProfile }) {
     }, 15000);
 
     try {
-      const { data: sessionData } = await withTimeout(supabase.auth.getSession(), 8000);
-      if (sessionData.session?.user.id !== user.id) {
-        setSaveState({ type: "error", message: "Sesi admin tidak ditemukan. Silakan login ulang." });
-        return;
-      }
-
-      const { data, error } = await withTimeout(
-        supabase
-          .from("profiles")
-          .upsert(
-            {
-              id: user.id,
-              name: form.name.trim(),
-              phone: phone.value || null,
-              location: form.location.trim() || null,
-              role: form.role.trim() || null,
-              bio: form.bio.trim() || null,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "id" }
-          )
-          .select()
-          .single(),
-        12000
-      );
-
-      if (error) {
-        const message =
-          error.code === "42501" || /permission denied/i.test(error.message || "")
-            ? "Database profiles belum memberi akses ke authenticated. Jalankan GRANT SELECT, INSERT, UPDATE ON public.profiles TO authenticated;"
-            : error.message || "Gagal menyimpan profil admin.";
-        setSaveState({ type: "error", message });
-        return;
-      }
+      const data = await saveAdminProfile({
+        name: form.name.trim(),
+        phone: phone.value,
+        location: form.location.trim(),
+        role: form.role.trim(),
+        bio: form.bio.trim(),
+      });
 
       const updatedUser: UserProfile = {
-        id: user.id,
+        id: data?.id || user.id,
         name: data?.name || form.name.trim(),
         email: user.email,
         phone: data?.phone || undefined,
         location: data?.location || undefined,
-        role: user.role,
+        role: data?.role || form.role.trim() || user.role,
         bio: data?.bio || undefined,
         created_at: data?.created_at || user.created_at,
         updated_at: data?.updated_at || new Date().toISOString(),

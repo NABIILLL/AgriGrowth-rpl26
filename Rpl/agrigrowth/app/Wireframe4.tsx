@@ -5,7 +5,7 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { useUser } from "@/hooks/useUser";
-import { useClerk } from "@clerk/nextjs";
+import { useClerk, UserButton } from "@clerk/nextjs";
 import { motion, Variants } from "framer-motion";
 
 const staggerContainer: Variants = {
@@ -68,29 +68,16 @@ export default function Wireframe4() {
 					<b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
 				</div>
 
-				<nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
-					<Link href={user ? "/dashboard" : "/"} className="hover:opacity-80 transition">Home</Link>
+				<nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-6 text-[15px] xl:text-[16px] font-bold lg:flex whitespace-nowrap">
+					<Link href="/" className="hover:opacity-80 transition">Home</Link>
 					<Link href="/about" className="hover:opacity-80 transition">About</Link>
-					<Link href="/wireframe4" className="border-b-2 border-[#365a1a]">Features</Link>
-				</nav>
-
-				<div className="flex items-center gap-4 min-h-[48px]">
+					<Link href="/growth-tracker" className="hover:opacity-80 transition">Growth Tracker</Link>
+				<Link href="/weather" className="hover:opacity-80 transition">Weather</Link>
+				<Link href="/history" className="hover:opacity-80 transition">History</Link>
 					{!isLoading && (
 						user ? (
 							<div className="hidden sm:flex items-center gap-4">
-								<Link
-									href="/profile"
-									className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-3 py-2 text-[16px] font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90 sm:text-[18px]"
-								>
-									<span>{user.name}</span>
-									<img alt="Profile" loading="lazy" className="h-8 w-8 object-contain" src={imgProfile} />
-								</Link>
-								<button 
-									onClick={handleLogout}
-									className="text-sm font-bold text-[#365a1a] hover:opacity-80 transition"
-								>
-	                {isLoggingOut ? "Keluar..." : "Logout"}
-	              </button>
+								<UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} />
 							</div>
 						) : (
 							<button 
@@ -110,26 +97,24 @@ export default function Wireframe4() {
 					>
 						{mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
 					</button>
-				</div>
+			</nav>
 
 				{/* Mobile menu panel */}
 				{mobileOpen && (
 					<div className="sm:hidden absolute right-4 top-20 z-20 w-64 rounded-md bg-white border border-[#e0e0e0] p-4 shadow-lg">
 						<nav className="flex flex-col gap-3">
-							<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href={user ? "/dashboard" : "/"}>Home</Link>
+							<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/">Home</Link>
 							<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/about">About</Link>
-							<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/wireframe4">Features</Link>
-						</nav>
+							<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/growth-tracker">Growth Tracker</Link>
+						<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/weather">Weather</Link>
+						<Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/history">History</Link>
+					</nav>
 
-						<div className="mt-3 border-t border-[#e0e0e0] pt-3">
+					<div className="mt-3 border-t border-[#e0e0e0] pt-3">
 							{!isLoading ? (
 								user ? (
 									<div className="flex flex-col gap-2">
-										<Link onClick={() => setMobileOpen(false)} href="/profile" className="flex items-center gap-2 rounded-md px-3 py-2 bg-[rgba(54,90,26,0.9)] text-white">
-											<img alt="Profile" loading="lazy" className="h-5 w-5 object-contain" src={imgProfile} />
-											<span className="font-medium">{user.name}</span>
-										</Link>
-										<button onClick={() => { setMobileOpen(false); handleLogout(); }} className="text-left text-sm font-semibold text-[#365a1a]">{isLoggingOut ? 'Keluar...' : 'Logout'}</button>
+										<UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} />
 									</div>
 								) : (
 									<button
@@ -155,13 +140,17 @@ export default function Wireframe4() {
 				className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-5 pb-12 pt-6 sm:px-10 lg:px-14 lg:pt-8"
 			>
 				{featureCards.map((feature, index) => {
-					const links = ["/features/growth-tracker", "/features/weather", "/features/overviews"];
+					const links = ["/growth-tracker", "/weather", "/history"];
 					return (
 						<motion.article
 							variants={fadeUpVariant}
 							key={feature.title}
 							className="rounded-[30px] bg-white p-5 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.2),-6px_6px_15px_0px_rgba(0,0,0,0.2)] sm:p-6 group cursor-pointer hover:shadow-[6px_-6px_25px_0px_rgba(0,0,0,0.3),-6px_6px_25px_0px_rgba(0,0,0,0.3)] transition"
 							onClick={(e: React.MouseEvent) => {
+								if (isLoading) {
+									e.preventDefault();
+									return;
+								}
 								if (!user) {
 									e.preventDefault();
 									openSignIn();
@@ -169,6 +158,10 @@ export default function Wireframe4() {
 							}}
 						>
 							<Link href={user ? links[index] : "#"} className="block" onClick={(e) => {
+								if (isLoading) {
+									e.preventDefault();
+									return;
+								}
 								if (!user) {
 									e.preventDefault();
 									openSignIn();

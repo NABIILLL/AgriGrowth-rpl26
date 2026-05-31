@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       .in("id", userIds);
 
     return NextResponse.json({ users: data?.users || [], roles: roles || [], profiles: profiles || [] });
-  } catch (err) {
+  } catch {
     // Fallback if SUPABASE_SERVICE_ROLE_KEY is missing
     const authHeader = request.headers.get("authorization") || "";
     const token = authHeader.toLowerCase().startsWith("bearer ") ? authHeader.slice(7) : null;
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
   await supabase.from("profiles").upsert({
     id: data.user.id,
     name,
-    role: profileRole,
+    role: role || profileRole,
     phone,
     location,
     bio,
@@ -139,7 +139,7 @@ export async function PATCH(request: Request) {
   await supabase.from("profiles").upsert({
     id,
     name,
-    role: profileRole,
+    role: role || profileRole,
     phone,
     location,
     bio,

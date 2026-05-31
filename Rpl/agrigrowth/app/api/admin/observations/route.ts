@@ -7,16 +7,30 @@ export async function GET(request: Request) {
 
   try {
     const supabase = getSupabaseService();
-    const { data, error } = await supabase
-      .from("growth_logs")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [growthLogsResult, trackerSamplesResult, sampleLogsResult] = await Promise.all([
+      supabase.from("growth_logs").select("*").order("created_at", { ascending: false }),
+      supabase.from("tracker_samples").select("id, tracker_id, sample_no, name, created_at").order("created_at", { ascending: false }),
+      supabase.from("growth_sample_logs").select("*").order("created_at", { ascending: false }),
+    ]);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (growthLogsResult.error) {
+      return NextResponse.json({ error: growthLogsResult.error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ observations: data || [] });
+    if (trackerSamplesResult.error) {
+      return NextResponse.json({ error: trackerSamplesResult.error.message }, { status: 500 });
+    }
+
+    if (sampleLogsResult.error) {
+      return NextResponse.json({ error: sampleLogsResult.error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      observations: growthLogsResult.data || [],
+      growth_logs: growthLogsResult.data || [],
+      tracker_samples: trackerSamplesResult.data || [],
+      growth_sample_logs: sampleLogsResult.data || [],
+    });
   } catch (err) {
     // Fallback if SUPABASE_SERVICE_ROLE_KEY is missing
     const authHeader = request.headers.get("authorization") || "";
@@ -29,16 +43,30 @@ export async function GET(request: Request) {
       auth: { persistSession: false },
     });
     
-    const { data, error } = await authClient
-      .from("growth_logs")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [growthLogsResult, trackerSamplesResult, sampleLogsResult] = await Promise.all([
+      authClient.from("growth_logs").select("*").order("created_at", { ascending: false }),
+      authClient.from("tracker_samples").select("id, tracker_id, sample_no, name, created_at").order("created_at", { ascending: false }),
+      authClient.from("growth_sample_logs").select("*").order("created_at", { ascending: false }),
+    ]);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (growthLogsResult.error) {
+      return NextResponse.json({ error: growthLogsResult.error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ observations: data || [] });
+    if (trackerSamplesResult.error) {
+      return NextResponse.json({ error: trackerSamplesResult.error.message }, { status: 500 });
+    }
+
+    if (sampleLogsResult.error) {
+      return NextResponse.json({ error: sampleLogsResult.error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      observations: growthLogsResult.data || [],
+      growth_logs: growthLogsResult.data || [],
+      tracker_samples: trackerSamplesResult.data || [],
+      growth_sample_logs: sampleLogsResult.data || [],
+    });
   }
 }
 

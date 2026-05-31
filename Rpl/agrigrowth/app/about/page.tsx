@@ -4,9 +4,10 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import { useClerk } from "@clerk/nextjs";
+import GlobalHeader from "@/components/GlobalHeader";
 import { useState } from "react";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
-import AgrigrowthLogo from "../../components/AgrigrowthLogo";
+
 import { motion, Variants } from "framer-motion";
 
 const staggerContainer: Variants = {
@@ -38,92 +39,7 @@ export default function About() {
 
   return (
     <main className="min-h-screen bg-white text-[#365a1a]">
-      {/* Header */}
-      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-2 sm:gap-4 px-5 py-4 sm:py-6 sm:px-10 lg:px-14">
-        <AgrigrowthLogo
-          tone="light"
-          textClassName="text-[20px] font-bold leading-none text-[#365a1a] sm:text-[21px]"
-        />
-
-        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
-          <Link href={user ? "/dashboard" : "/"} className="transition hover:opacity-80">
-            Home
-          </Link>
-          <Link href="/about" className="border-b-2 border-[#365a1a]">
-            About
-          </Link>
-          <Link href="/wireframe4" className="transition hover:opacity-80">
-            Features
-          </Link>
-        </nav>
-
-        <div className="flex items-center gap-3 min-h-[48px]">
-          {!isLoading && (
-            user ? (
-              <div className="hidden sm:flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4">
-                <Link
-                  href="/profile"
-                  className="flex items-center gap-2 rounded-full bg-[rgba(54,90,26,0.75)] px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm md:text-base font-medium text-[#d7e4cd] shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:opacity-90"
-                >
-                  <span>{user.name}</span>
-                  <img alt="Profile" loading="lazy" className="h-8 w-8 object-contain" src={imgProfile} />
-                </Link>
-                <button onClick={handleLogout} disabled={isLoggingOut} className="text-xs sm:text-sm font-bold text-[#365a1a] hover:opacity-80 transition">
-                  {isLoggingOut ? "Keluar..." : "Logout"}
-                </button>
-              </div>
-            ) : (
-              <button onClick={() => openSignIn()} className="hidden sm:block rounded-full bg-[#365a1a] px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm md:text-base font-medium text-white shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] hover:bg-[#2d4915] transition">
-                Login / Sign Up
-              </button>
-            )
-          )}
-
-          {/* Mobile menu toggle */}
-          <button
-            aria-label="Toggle menu"
-            onClick={() => setMobileOpen((s) => !s)}
-            className="inline-flex items-center justify-center rounded-md p-2 text-[#365a1a] sm:hidden"
-          >
-            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-
-        {/* Mobile menu panel */}
-        {mobileOpen && (
-          <div className="sm:hidden absolute right-4 top-16 z-20 w-64 rounded-md bg-white border border-[#e0e0e0] p-4 shadow-lg">
-            <nav className="flex flex-col gap-3">
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href={user ? "/dashboard" : "/"}>Home</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/about">About</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/wireframe4">Features</Link>
-            </nav>
-
-            <div className="mt-3 border-t border-[#e0e0e0] pt-3">
-              {!isLoading ? (
-                user ? (
-                  <div className="flex flex-col gap-2">
-                    <Link onClick={() => setMobileOpen(false)} href="/profile" className="flex items-center gap-2 rounded-md px-3 py-2 bg-[rgba(54,90,26,0.9)] text-white">
-                      <img alt="Profile" loading="lazy" className="h-5 w-5 object-contain" src={imgProfile} />
-                      <span className="font-medium">{user.name}</span>
-                    </Link>
-                    <button onClick={() => { setMobileOpen(false); handleLogout(); }} className="text-left text-sm font-semibold text-[#365a1a]">{isLoggingOut ? 'Keluar...' : 'Logout'}</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setMobileOpen(false);
-                      openSignIn();
-                    }}
-                    className="w-full rounded-full bg-[#365a1a] px-3 py-2 text-sm font-medium text-white hover:bg-[#2d4915] transition"
-                  >
-                    Login / Sign Up
-                  </button>
-                )
-              ) : null}
-            </div>
-          </div>
-        )}
-      </header>
+      <GlobalHeader variant="light" />
 
       {/* Content */}
       <motion.section 
@@ -215,6 +131,72 @@ export default function About() {
               <p className="mt-2 text-xs sm:text-[13px] text-[#365a1a]">Mobile &amp; desktop</p>
             </motion.div>
           </div>
+        </div>
+
+        {/* Growth Tracker Section */}
+        <div className="mt-16 sm:mt-20 pt-12 sm:pt-16 border-t-2 border-[#d9d9d9]">
+          <motion.article variants={fadeUpVariant} className="rounded-[20px] sm:rounded-[30px] bg-white p-4 sm:p-5 md:p-6 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.2),-6px_6px_15px_0px_rgba(0,0,0,0.2)]">
+            <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-center md:gap-8">
+              <div className="h-[150px] sm:h-[190px] w-full overflow-hidden rounded-[16px] sm:rounded-[20px] md:h-[273px] md:max-w-[605px]">
+                <img alt="Growth Tracker" className="h-full w-full object-cover" src="https://images.unsplash.com/photo-1592982537447-6f2a6a0c5c8e?q=80&w=800&auto=format&fit=crop" />
+              </div>
+
+              <div className="w-full md:max-w-[578px]">
+                <h2 className="text-[32px] sm:text-[42px] font-extrabold leading-[1.05] text-[#365a1a] lg:text-[60px]">
+                  Growth Tracker
+                </h2>
+                <p className="mt-2 sm:mt-3 text-[13px] sm:text-[15px] font-medium leading-[1.35] text-[#365a1a] lg:text-[18px]">
+                  Berfungsi sebagai buku catatan digital untuk memasukkan data fisik tanaman secara berkala, meliputi parameter tinggi tanaman, jumlah daun, jumlah cabang, hingga kondisi visual tanaman di lapangan. Melakukan pemrosesan data secara otomatis untuk menghasilkan nilai statistik tanpa pengolahan manual.
+                </p>
+              </div>
+            </div>
+          </motion.article>
+
+          {/* Features List */}
+          <motion.div variants={fadeUpVariant} className="mt-6 rounded-[20px] sm:rounded-[30px] bg-white p-4 sm:p-6 md:p-8 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.2),-6px_6px_15px_0px_rgba(0,0,0,0.2)]">
+            <h3 className="text-[24px] sm:text-[32px] font-bold md:text-[40px]">Fitur Growth Tracker</h3>
+
+            <div className="mt-4 sm:mt-6 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
+              {[
+                {
+                  title: "Pencatatan Data Berkala",
+                  description: "Masukkan data fisik tanaman secara berkala dengan parameter lengkap",
+                },
+                {
+                  title: "Analisis Otomatis",
+                  description: "Sistem otomatis menganalisis dan memberikan rekomendasi untuk tanaman Anda",
+                },
+                {
+                  title: "Perhitungan Statistik",
+                  description: "Hitung rata-rata pertumbuhan, produktivitas, dan kebutuhan pupuk secara akurat",
+                },
+                {
+                  title: "Konversi Luas Lahan",
+                  description: "Konversi kebutuhan pupuk berdasarkan luas lahan yang Anda budidayakan",
+                },
+                {
+                  title: "Riwayat Lengkap",
+                  description: "Simpan dan lihat riwayat pengamatan tanaman dari waktu ke waktu",
+                },
+                {
+                  title: "Rekomendasi Perawatan",
+                  description: "Dapatkan rekomendasi perawatan berdasarkan data yang telah dimasukkan",
+                },
+              ].map((feature, index) => (
+                <div
+                  key={index}
+                  className="rounded-[16px] sm:rounded-[20px] border-2 border-[#365a1a] p-3 sm:p-4 md:p-6"
+                >
+                  <h4 className="text-[16px] sm:text-[18px] font-bold text-[#365a1a] md:text-[20px]">
+                    {feature.title}
+                  </h4>
+                  <p className="mt-1 sm:mt-2 text-[12px] sm:text-[14px] text-[#365a1a]/80 md:text-[16px]">
+                    {feature.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
         </div>
       </motion.section>
     </main>
