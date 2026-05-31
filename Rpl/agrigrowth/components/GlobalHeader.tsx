@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/nextjs";
+import AgrigrowthLogo from "@/components/AgrigrowthLogo";
 
 interface GlobalHeaderProps {
   variant?: "light" | "dark";
@@ -22,10 +23,6 @@ export default function GlobalHeader({ variant = "light" }: GlobalHeaderProps) {
   const textHover = isDark ? "hover:text-white/80" : "hover:opacity-80";
   const navTextBase = isDark ? "text-white/90" : "text-[#365a1a]";
   const navTextHover = isDark ? "hover:text-white" : "hover:opacity-80";
-  const logoSrc = isDark
-    ? "https://api.iconify.design/lucide:leaf.svg?color=%23ffffff"
-    : "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
-
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/about", label: "About" },
@@ -39,9 +36,8 @@ export default function GlobalHeader({ variant = "light" }: GlobalHeaderProps) {
     <>
       <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
         {/* Logo */}
-        <Link href="/" className={`flex items-center gap-2.5 transition ${textHover}`}>
-          <img alt="Agrigrowth logo" loading="lazy" className="h-[51px] w-[59px] object-contain" src={logoSrc} />
-          <b className={`text-[20px] leading-none sm:text-[21px] ${textColor}`}>Agrigrowth Monitor</b>
+        <Link href="/" className={`flex items-center transition ${textHover}`}>
+          <AgrigrowthLogo imageSrc="/logo%202.png" showText={false} className="h-10 w-[170px] sm:h-11 sm:w-[190px]" />
         </Link>
 
         {/* Desktop Nav */}

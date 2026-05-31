@@ -271,24 +271,28 @@ export async function GET(request: Request) {
     let logs: any[] = [];
     let trackerSamples: any[] = [];
     let sampleLogs: any[] = [];
+    let diseaseAnalysisLogs: any[] = [];
 
     if (trackerId) {
-      const [{ data: logsData, error: logsError }, { data: samplesData, error: samplesError }, { data: sampleLogsData, error: sampleLogsError }] = await Promise.all([
+      const [{ data: logsData, error: logsError }, { data: samplesData, error: samplesError }, { data: sampleLogsData, error: sampleLogsError }, { data: diseaseLogsData, error: diseaseLogsError }] = await Promise.all([
         supabase.from("growth_logs").select("*").eq("tracker_id", trackerId).order("day_number", { ascending: true }),
         supabase.from("tracker_samples").select("id, tracker_id, sample_no, name, created_at").eq("tracker_id", trackerId).order("sample_no", { ascending: true }),
         supabase.from("growth_sample_logs").select("*").eq("tracker_id", trackerId).order("day_number", { ascending: true }),
+        supabase.from("disease_analysis_logs").select("id, tracker_id, plant_type, status, diagnosis, severity, urgency, detected_as, gejala, penyebab, solusi, pencegahan, raw_text, created_at").eq("tracker_id", trackerId).order("created_at", { ascending: false }),
       ]);
 
       if (logsError) return NextResponse.json({ error: logsError.message }, { status: 500 });
       if (samplesError) return NextResponse.json({ error: samplesError.message }, { status: 500 });
       if (sampleLogsError) return NextResponse.json({ error: sampleLogsError.message }, { status: 500 });
+      if (diseaseLogsError) return NextResponse.json({ error: diseaseLogsError.message }, { status: 500 });
 
       logs = logsData || [];
       trackerSamples = samplesData || [];
       sampleLogs = sampleLogsData || [];
+      diseaseAnalysisLogs = diseaseLogsData || [];
     }
 
-    return NextResponse.json({ trackers: trackers || [], logs, tracker_samples: trackerSamples, growth_sample_logs: sampleLogs });
+    return NextResponse.json({ trackers: trackers || [], logs, tracker_samples: trackerSamples, growth_sample_logs: sampleLogs, disease_analysis_logs: diseaseAnalysisLogs });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load history";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -36,9 +36,9 @@ const imgLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
 const imgProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 
 // Growth tracker cards images
-const imgSawahBelakangKampus = "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=800&auto=format&fit=crop";
-const imgJagungRezon = "https://images.unsplash.com/photo-1599940824399-b87987ceb72a?q=80&w=800&auto=format&fit=crop";
-const imgPadiPraktikum = "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=800&auto=format&fit=crop";
+const imgSawahBelakangKampus = "/padi.png";
+const imgJagungRezon = "/jagung.png";
+const imgPadiPraktikum = "/bawang.png";
 
 // Result page images
 const imgRice2 = "https://images.unsplash.com/photo-1530507629858-e4977d30e9e0?q=80&w=800&auto=format&fit=crop";

@@ -19,8 +19,6 @@ import {
   ResponsiveContainer
 } from "recharts";
 import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
 import * as htmlToImage from "html-to-image";
 import { motion, Variants } from "framer-motion";
 
@@ -45,6 +43,15 @@ const fadeUpVariant: Variants = {
 
 const imgLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
 const imgProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
+
+const autoTable = (doc: jsPDF, options: any) => {
+  const plugin = (doc as any).autoTable;
+  if (typeof plugin === "function") {
+    return plugin.call(doc, options);
+  }
+
+  return null;
+};
 
 interface TrackerData {
   id: string;
@@ -76,6 +83,19 @@ interface SampleObservationInput {
   landArea: string;
 }
 
+interface DiseaseAnalysisLogData {
+  id: string;
+  tracker_id: string;
+  plant_type: string;
+  status: string;
+  diagnosis: string;
+  severity: string;
+  urgency: string;
+  detected_as?: string | null;
+  raw_text?: string | null;
+  created_at?: string;
+}
+
 async function readJsonResponse(response: Response) {
   const body = await response.text();
   if (!body) return null;
@@ -105,6 +125,7 @@ export default function ObservationHistoryPage() {
   const [logsRaw, setLogsRaw] = useState<any[]>([]);
   const [trackerSamples, setTrackerSamples] = useState<any[]>([]);
   const [sampleLogsRaw, setSampleLogsRaw] = useState<any[]>([]);
+  const [diseaseAnalysisLogs, setDiseaseAnalysisLogs] = useState<DiseaseAnalysisLogData[]>([]);
   const [editingLog, setEditingLog] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<string>("pengamatan");
   const [showCreateTrackerModal, setShowCreateTrackerModal] = useState(false);
@@ -348,6 +369,7 @@ export default function ObservationHistoryPage() {
       setLogsRaw(growthLogRow ? [growthLogRow] : []);
       setTrackerSamples(trackerSampleRows);
       setSampleLogsRaw(sampleLogRows);
+      setDiseaseAnalysisLogs([]);
       setChartData(growthLogRow ? [{
         day: `Hari ${growthLogRow.day_number}`,
         dayNumber: growthLogRow.day_number,
@@ -442,6 +464,7 @@ export default function ObservationHistoryPage() {
 
         const logs = result.logs || [];
         setLogsRaw(logs);
+        setDiseaseAnalysisLogs(result.disease_analysis_logs || []);
 
         if (logs.length > 0) {
           const data = logs.map((log: any) => ({
@@ -493,6 +516,7 @@ export default function ObservationHistoryPage() {
 
         setTrackerSamples(result.tracker_samples || []);
         setSampleLogsRaw(result.growth_sample_logs || []);
+        setDiseaseAnalysisLogs(result.disease_analysis_logs || []);
         if (!selectedSampleId && result.tracker_samples?.length) {
           setSelectedSampleId(result.tracker_samples[0].id);
         }
@@ -596,6 +620,7 @@ export default function ObservationHistoryPage() {
     const nextSamples = result.tracker_samples || [];
     setTrackerSamples(nextSamples);
     setSampleLogsRaw(result.growth_sample_logs || []);
+    setDiseaseAnalysisLogs(result.disease_analysis_logs || []);
 
     const preferredSampleExists = preferredSampleId && nextSamples.some((sample: any) => String(sample.id) === String(preferredSampleId));
     if (preferredSampleExists) {
@@ -1172,9 +1197,27 @@ export default function ObservationHistoryPage() {
     }
 
     try {
-      const wb = XLSX.utils.book_new();
+      const escapeCsv = (value: any) => {
+        const text = String(value ?? "");
+        return `"${text.replace(/"/g, '""')}"`;
+      };
+
+      const rows: string[] = [];
 
       if (logsRaw.length > 0) {
+        rows.push("PERTUMBUHAN");
+        rows.push([
+          "Hari Ke",
+          "Tinggi Tanaman (cm)",
+          "Jumlah Daun",
+          "Jumlah Cabang",
+          "pH Tanah",
+          "Kondisi Cahaya",
+          "Kondisi Tanaman",
+          "Jenis Pupuk",
+          "Luas Lahan (Ha)",
+        ].map(escapeCsv).join(","));
+
         const growthData = logsRaw.map(log => ({
           "Hari Ke": log.day_number,
           "Tinggi Tanaman (cm)": log.plant_height,
@@ -1186,10 +1229,26 @@ export default function ObservationHistoryPage() {
           "Jenis Pupuk": log.fertilizer_type,
           "Luas Lahan (Ha)": log.land_area
         }));
-        const wsGrowth = XLSX.utils.json_to_sheet(growthData);
-        XLSX.utils.book_append_sheet(wb, wsGrowth, "Pertumbuhan");
+        growthData.forEach((row) => {
+          rows.push(Object.values(row).map(escapeCsv).join(","));
+        });
 
         if (sampleLogsRaw && sampleLogsRaw.length > 0) {
+          rows.push("");
+          rows.push("DETAIL SAMPEL");
+          rows.push([
+            "Sampel",
+            "Hari Ke",
+            "Tinggi Tanaman (cm)",
+            "Jumlah Daun",
+            "Jumlah Cabang",
+            "pH Tanah",
+            "Kondisi Cahaya",
+            "Kondisi Tanaman",
+            "Jenis Pupuk",
+            "Luas Lahan (Ha)",
+          ].map(escapeCsv).join(","));
+
           const sampleData = sampleLogsRaw.map(log => {
             const sample = trackerSamples.find(s => String(s.id) === String(log.sample_id));
             const sampleName = sample ? (sample.name || `Sampel ${sample.sample_no}`) : "Sampel";
@@ -1206,20 +1265,26 @@ export default function ObservationHistoryPage() {
               "Luas Lahan (Ha)": log.land_area
             };
           });
-          const wsSample = XLSX.utils.json_to_sheet(sampleData);
-          XLSX.utils.book_append_sheet(wb, wsSample, "Detail Sampel");
+          sampleData.forEach((row) => {
+            rows.push(Object.values(row).map(escapeCsv).join(","));
+          });
         }
       }
 
       if (costs.length > 0) {
+        rows.push("");
+        rows.push("BIAYA");
+        rows.push(["Tanggal", "Kategori", "Keterangan", "Nominal (Rp)"].map(escapeCsv).join(","));
+
         const costsData = costs.map(cost => ({
           "Tanggal": new Date(cost.date).toLocaleDateString('id-ID'),
           "Kategori": cost.category,
           "Keterangan": cost.description,
           "Nominal (Rp)": cost.amount
         }));
-        const wsCost = XLSX.utils.json_to_sheet(costsData);
-        XLSX.utils.book_append_sheet(wb, wsCost, "Biaya");
+        costsData.forEach((row) => {
+          rows.push(Object.values(row).map(escapeCsv).join(","));
+        });
       }
 
       const d = new Date();
@@ -1228,8 +1293,15 @@ export default function ObservationHistoryPage() {
       const yy = String(d.getFullYear()).slice(-2);
       const dateStr = `${dd}${mm}${yy}`;
       
-      XLSX.writeFile(wb, `Data_${trackerTitle}_${dateStr}.xlsx`);
-      toast.success("Excel berhasil diunduh!");
+      const csvContent = "\uFEFF" + rows.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Data_${trackerTitle}_${dateStr}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("CSV berhasil diunduh!");
     } catch (err: any) {
       console.error("Export Excel Error:", err);
       toast.error("Gagal membuat Excel");
@@ -1283,9 +1355,6 @@ export default function ObservationHistoryPage() {
                 </div>
               )}
             </div>
-            <button className="rounded-full bg-white px-3 sm:px-6 py-1.5 sm:py-2.5 text-[11px] sm:text-sm font-bold shadow-md border border-[#365a1a]/20 hover:bg-gray-50 hover:shadow-lg transition">
-              📤
-            </button>
             <button
               type="button"
               onClick={() => setShowCreateTrackerModal(true)}
@@ -1561,6 +1630,44 @@ export default function ObservationHistoryPage() {
                       </div>
                     ))}
                   </div>
+                </motion.div>
+
+                <motion.div variants={fadeUpVariant} className="rounded-[20px] border-2 border-[#365a1a] bg-white p-6 shadow-sm">
+                  <h2 className="mb-4 text-[20px] font-bold sm:text-[24px]">🧪 Riwayat Analisis Penyakit</h2>
+                  {diseaseAnalysisLogs.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-300 bg-[#fafcf7] px-4 py-8 text-center text-sm text-gray-500">
+                      Belum ada hasil analisis penyakit yang disimpan untuk lahan ini.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {diseaseAnalysisLogs.map((item) => (
+                        <div key={item.id} className="rounded-xl border border-gray-200 bg-[#fafcf7] p-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <p className="text-sm font-semibold text-[#365a1a] uppercase tracking-wide">{item.status}</p>
+                              <p className="mt-1 text-lg font-bold text-gray-800">{item.diagnosis}</p>
+                              <p className="mt-1 text-sm text-gray-600">Tingkat keparahan: {item.severity || "-"}</p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <span className="rounded-full bg-[#365a1a] px-3 py-1 text-xs font-semibold text-white">{item.urgency}</span>
+                              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#365a1a] border border-[#365a1a]/20">
+                                {item.plant_type}
+                              </span>
+                            </div>
+                          </div>
+                          {item.detected_as && (
+                            <p className="mt-3 text-sm text-orange-700">Terdeteksi sebagai: {item.detected_as}</p>
+                          )}
+                          {item.raw_text && (
+                            <div className="mt-3 rounded-lg bg-white p-3 text-sm text-gray-600 border border-gray-100 whitespace-pre-wrap">
+                              {item.raw_text}
+                            </div>
+                          )}
+                          <p className="mt-3 text-xs text-gray-500">Disimpan: {item.created_at ? new Date(item.created_at).toLocaleString("id-ID") : "-"}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
 
                 </>

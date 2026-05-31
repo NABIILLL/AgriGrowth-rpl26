@@ -22,7 +22,7 @@ import { getWeatherDescription } from "@/lib/weather";
 import { UserButton } from "@clerk/nextjs";
 
 const imgRainHero = "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?q=80&w=2000&auto=format&fit=crop";
-const imgBrandLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
+const imgBrandLogo = "/logo%202.png";
 const imgProfileAvatar = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 const imgCloudyIcon = "https://api.iconify.design/lucide:cloud.svg?color=%23365a1a";
 const imgRainIcon = "https://api.iconify.design/lucide:cloud-rain.svg?color=%23365a1a";
@@ -215,8 +215,8 @@ export default function WeatherInfo() {
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
         <Link href="/" className="flex items-center gap-2.5 transition hover:opacity-80">
-          <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgBrandLogo} />
-          <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
+          <img alt="Agrigrowth logo" className="h-10 w-[170px] object-contain sm:h-11 sm:w-[190px]" src={imgBrandLogo} />
+          <b className="text-[20px] leading-none sm:text-[21px]"></b>
         </Link>
 
         <nav className="hidden items-center gap-10 text-[21px] font-bold lg:flex">

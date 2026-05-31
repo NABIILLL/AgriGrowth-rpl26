@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getRequester, getSupabaseService } from "../admin/_utils";
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageBase64, mimeType, jenisTanaman } = await req.json();
+    const { imageBase64, mimeType, jenisTanaman, trackerId } = await req.json();
 
     if (!imageBase64 || !jenisTanaman) {
       return NextResponse.json(
@@ -219,6 +220,61 @@ Gunakan Bahasa Indonesia yang jelas untuk petani. Diagnosis harus SPESIFIK berda
       hasil = JSON.parse(cleaned);
     } catch {
       hasil = { rawText: cleaned };
+    }
+
+    const selectedTrackerId = typeof trackerId === "string" ? trackerId.trim() : "";
+    if (selectedTrackerId) {
+      const user = await getRequester(req);
+      if (!user) {
+        return NextResponse.json({ error: "Silakan login untuk menyimpan hasil analisis ke monitoring lahan." }, { status: 401 });
+      }
+
+      const supabase = getSupabaseService();
+      const { data: trackerRow, error: trackerError } = await supabase
+        .from("trackers")
+        .select("id, user_id, title, plant_type")
+        .eq("id", selectedTrackerId)
+        .maybeSingle();
+
+      if (trackerError) {
+        return NextResponse.json({ error: trackerError.message }, { status: 500 });
+      }
+
+      if (!trackerRow) {
+        return NextResponse.json({ error: "Lahan tidak ditemukan." }, { status: 404 });
+      }
+
+      if (trackerRow.user_id !== user.id) {
+        return NextResponse.json({ error: "Anda tidak memiliki akses ke lahan ini." }, { status: 403 });
+      }
+
+      const { data: savedAnalysis, error: saveError } = await supabase
+        .from("disease_analysis_logs")
+        .insert({
+          user_id: user.id,
+          tracker_id: selectedTrackerId,
+          plant_type: jenisTanaman,
+          image_name: null,
+          image_mime_type: mimeType || null,
+          status: hasil.status || "Perlu Perhatian",
+          diagnosis: hasil.diagnosis || "Lihat hasil lengkap di bawah",
+          severity: hasil.tingkatKeparahan || "-",
+          urgency: hasil.urgensi || "Pantau Saja",
+          detected_as: hasil.detectedAs || null,
+          gejala: hasil.gejala || [],
+          penyebab: hasil.penyebab || null,
+          solusi: hasil.solusi || [],
+          pencegahan: hasil.pencegahan || [],
+          raw_text: hasil.rawText || null,
+        })
+        .select("id, tracker_id, plant_type, status, diagnosis, severity, urgency, created_at")
+        .single();
+
+      if (saveError) {
+        return NextResponse.json({ error: saveError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ hasil, savedAnalysis });
     }
 
     return NextResponse.json({ hasil });

@@ -18,7 +18,7 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
   return (
     <>
       <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
-        <AgrigrowthLogo />
+        <AgrigrowthLogo imageSrc="/logo%201.png" showText={false} className="h-10 w-[170px] sm:h-11 sm:w-[190px]" />
 
         <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-6 text-[15px] xl:text-[16px] font-bold lg:flex whitespace-nowrap opacity-90">
           <Link className="text-white/90 hover:text-white transition" href="/">Home</Link>

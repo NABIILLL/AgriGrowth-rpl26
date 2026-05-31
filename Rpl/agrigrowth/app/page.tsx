@@ -27,7 +27,7 @@ const fadeUpVariant: Variants = {
 };
 
 const heroBackground =
-  "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?q=80&w=2400&auto=format&fit=crop";
+  "/foto%20dashboard.png";
 
 export default function Home() {
   const { isSignedIn } = useAuth();
