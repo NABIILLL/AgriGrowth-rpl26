@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSupabaseService, requireUser } from "../../admin/_utils";
 
+const isMissingTableError = (error: any) => {
+  const message = String(error?.message || error || "");
+  return message.includes("Could not find the table") || error?.code === "42P01";
+};
+
 type SamplePayload = {
   plant_height: number;
   leaf_count: number;
@@ -274,17 +279,32 @@ export async function GET(request: Request) {
     let diseaseAnalysisLogs: any[] = [];
 
     if (trackerId) {
-      const [{ data: logsData, error: logsError }, { data: samplesData, error: samplesError }, { data: sampleLogsData, error: sampleLogsError }, { data: diseaseLogsData, error: diseaseLogsError }] = await Promise.all([
+      const [{ data: logsData, error: logsError }, { data: samplesData, error: samplesError }, { data: sampleLogsData, error: sampleLogsError }] = await Promise.all([
         supabase.from("growth_logs").select("*").eq("tracker_id", trackerId).order("day_number", { ascending: true }),
         supabase.from("tracker_samples").select("id, tracker_id, sample_no, name, created_at").eq("tracker_id", trackerId).order("sample_no", { ascending: true }),
         supabase.from("growth_sample_logs").select("*").eq("tracker_id", trackerId).order("day_number", { ascending: true }),
-        supabase.from("disease_analysis_logs").select("id, tracker_id, plant_type, status, diagnosis, severity, urgency, detected_as, gejala, penyebab, solusi, pencegahan, raw_text, created_at").eq("tracker_id", trackerId).order("created_at", { ascending: false }),
       ]);
+
+      let diseaseLogsData: any[] = [];
+      let diseaseLogsError: any = null;
+
+      try {
+        const diseaseResult = await supabase
+          .from("disease_analysis_logs")
+          .select("id, tracker_id, plant_type, status, diagnosis, severity, urgency, detected_as, gejala, penyebab, solusi, pencegahan, raw_text, created_at")
+          .eq("tracker_id", trackerId)
+          .order("created_at", { ascending: false });
+
+        diseaseLogsData = diseaseResult.data || [];
+        diseaseLogsError = diseaseResult.error;
+      } catch (error) {
+        diseaseLogsError = error;
+      }
 
       if (logsError) return NextResponse.json({ error: logsError.message }, { status: 500 });
       if (samplesError) return NextResponse.json({ error: samplesError.message }, { status: 500 });
       if (sampleLogsError) return NextResponse.json({ error: sampleLogsError.message }, { status: 500 });
-      if (diseaseLogsError) return NextResponse.json({ error: diseaseLogsError.message }, { status: 500 });
+      if (diseaseLogsError && !isMissingTableError(diseaseLogsError)) return NextResponse.json({ error: diseaseLogsError.message }, { status: 500 });
 
       logs = logsData || [];
       trackerSamples = samplesData || [];
