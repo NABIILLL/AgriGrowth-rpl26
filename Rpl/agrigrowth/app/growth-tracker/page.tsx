@@ -30,17 +30,17 @@ const cropCards = [
   {
     id: "padi",
     title: "Padi",
-    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=800&auto=format&fit=crop",
+    image: "/padi.png",
   },
   {
     id: "jagung",
     title: "Jagung",
-    image: "https://images.unsplash.com/photo-1599940824399-b87987ceb72a?q=80&w=800&auto=format&fit=crop",
+    image: "/jagung.png",
   },
   {
     id: "bawang",
     title: "Bawang Merah",
-    image: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=800&auto=format&fit=crop",
+    image: "/bawang.png",
   },
 ];
 

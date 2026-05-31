@@ -14,14 +14,22 @@ type SupabaseUser = {
 type RoleRow = { user_id: string; role: string | null };
 type ProfileRow = { id: string; name?: string | null; location?: string | null };
 type Tracker = { id: string; user_id: string; title: string; plant_type?: string | null; created_at?: string | null };
-type Observation = {
+type GrowthLog = {
   id: string;
   tracker_id: string;
   day_number: number;
   plant_height?: number | null;
   leaf_count?: number | null;
+  branch_count?: number | null;
+  soil_ph?: number | null;
+  light_condition?: string | null;
+  plant_condition?: string | null;
+  fertilizer_type?: string | null;
+  land_area?: number | null;
   created_at?: string | null;
 };
+type GrowthSampleLog = { id: string; tracker_id: string; sample_id?: string | null; day_number?: number | null; created_at?: string | null };
+type TrackerSample = { id: string; tracker_id: string; sample_no: number; name: string; created_at?: string | null };
 
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
@@ -36,7 +44,9 @@ export default function AdminDashboardPage() {
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [trackers, setTrackers] = useState<Tracker[]>([]);
-  const [observations, setObservations] = useState<Observation[]>([]);
+  const [growthLogs, setGrowthLogs] = useState<GrowthLog[]>([]);
+  const [growthSampleLogs, setGrowthSampleLogs] = useState<GrowthSampleLog[]>([]);
+  const [trackerSamples, setTrackerSamples] = useState<TrackerSample[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastSynced, setLastSynced] = useState<string>("");
@@ -51,9 +61,7 @@ export default function AdminDashboardPage() {
     return map;
   }, [trackers]);
 
-  const pendingObservations = useMemo(() => {
-    return observations.filter((item) => item.plant_height == null || item.leaf_count == null).length;
-  }, [observations]);
+  const trackerMap = useMemo(() => new Map(trackers.map((tracker) => [tracker.id, tracker])), [trackers]);
 
   const recentUsers = useMemo(() => {
     return [...users]
@@ -87,7 +95,9 @@ export default function AdminDashboardPage() {
           setRoles(userData.roles || []);
           setProfiles(userData.profiles || []);
           setTrackers(trackerData.trackers || []);
-          setObservations(observationData.observations || []);
+          setGrowthLogs(observationData.growth_logs || observationData.observations || []);
+          setGrowthSampleLogs(observationData.growth_sample_logs || []);
+          setTrackerSamples(observationData.tracker_samples || []);
           setLastSynced(new Date().toLocaleTimeString("id-ID"));
           setError(null);
         }
@@ -142,7 +152,7 @@ export default function AdminDashboardPage() {
 
     const counts = last7Days.map((date) => {
       const dayKey = date.toISOString().slice(0, 10);
-      return observations.filter((obs) => obs.created_at?.startsWith(dayKey)).length;
+      return growthLogs.filter((obs) => obs.created_at?.startsWith(dayKey)).length;
     });
 
     const max = Math.max(...counts, 1);
@@ -157,16 +167,26 @@ export default function AdminDashboardPage() {
       el.innerHTML = `<div class="bar-val">${value}</div><div class="bar-fill" style="height:${height}px;background:${index === 5 ? "var(--g400)" : "var(--g700)"};transition:height .4s ${index * 60}ms"></div><div class="bar-label">${getShortDay(last7Days[index])}</div>`;
       chart.appendChild(el);
     });
-  }, [observations]);
+  }, [growthLogs]);
 
   const activityItems = useMemo(() => {
-    const recentObservations = [...observations]
+    const recentGrowthLogs = [...growthLogs]
       .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
       .slice(0, 2)
       .map((item) => ({
-        icon: "ti ti-file-upload",
+        icon: "ti ti-chart-line",
         tone: "a",
-        text: `Observasi baru untuk tracker ${item.tracker_id.slice(0, 8)}...`,
+        text: `Growth log baru untuk tracker ${item.tracker_id.slice(0, 8)}...`,
+        time: formatDate(item.created_at),
+      }));
+
+    const recentSampleLogs = [...growthSampleLogs]
+      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
+      .slice(0, 1)
+      .map((item) => ({
+        icon: "ti ti-logs",
+        tone: "b",
+        text: `Sample log tracker ${item.tracker_id.slice(0, 8)}...`,
         time: formatDate(item.created_at),
       }));
 
@@ -193,8 +213,18 @@ export default function AdminDashboardPage() {
         };
       });
 
-    return [...recentAccounts, ...recentObservations, ...recentTrackers].slice(0, 5);
-  }, [observations, trackers, users, profileMap]);
+    const recentTrackerSamples = [...trackerSamples]
+      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
+      .slice(0, 1)
+      .map((item) => ({
+        icon: "ti ti-database",
+        tone: "g",
+        text: `Tracker sample ${item.name} dibuat untuk ${trackerMap.get(item.tracker_id)?.title || item.tracker_id.slice(0, 8)}...`,
+        time: formatDate(item.created_at),
+      }));
+
+    return [...recentAccounts, ...recentGrowthLogs, ...recentSampleLogs, ...recentTrackerSamples, ...recentTrackers].slice(0, 5);
+  }, [growthLogs, growthSampleLogs, trackerSamples, trackers, users, profileMap, trackerMap]);
 
   return (
     <>
@@ -210,7 +240,6 @@ export default function AdminDashboardPage() {
           <div className="page-sub">Last synced {lastSynced || "-"} · Data Supabase terkini</div>
         </div>
         <div className="header-actions">
-          <button className="btn btn-ghost"><i className="ti ti-download"></i> Export Report</button>
           <button className="btn btn-primary"><i className="ti ti-plus"></i> Add User</button>
         </div>
       </div>
@@ -219,38 +248,33 @@ export default function AdminDashboardPage() {
         <div className="kpi-card g">
           <div className="kpi-icon g"><i className="ti ti-users"></i></div>
           <div className="kpi-num">{users.length}</div>
-          <div className="kpi-label">Total Registered Users</div>
+          <div className="kpi-label">Users</div>
         </div>
         <div className="kpi-card a">
           <div className="kpi-icon a"><i className="ti ti-plant"></i></div>
           <div className="kpi-num">{trackers.length}</div>
-          <div className="kpi-label">Active Growth Trackers</div>
+          <div className="kpi-label">Trackers</div>
         </div>
         <div className="kpi-card b">
           <div className="kpi-icon b"><i className="ti ti-notes"></i></div>
-          <div className="kpi-num">{observations.length}</div>
-          <div className="kpi-label">Observations Submitted</div>
-        </div>
-        <div className="kpi-card r">
-          <div className="kpi-icon r"><i className="ti ti-alert-triangle"></i></div>
-          <div className="kpi-num">{pendingObservations}</div>
-          <div className="kpi-label">Pending Approvals</div>
+          <div className="kpi-num">{growthLogs.length}</div>
+          <div className="kpi-label">Growth Logs</div>
         </div>
       </div>
 
       <div className="grid-3-2">
         <div className="panel">
           <div className="panel-header">
-            <div className="panel-title"><i className="ti ti-chart-bar"></i> Observation Submissions — Daily</div>
+            <div className="panel-title"><i className="ti ti-chart-bar"></i> Growth Logs — Daily</div>
             <div className="panel-actions">
               <button className="mini-btn active">Week</button>
             </div>
           </div>
           <div className="chart-area" id="barChart"></div>
           <div className="stat-inline">
-            <div className="stat-cell"><div className="stat-cell-num">{observations.length}</div><div className="stat-cell-lbl">Total</div></div>
+            <div className="stat-cell"><div className="stat-cell-num">{growthLogs.length}</div><div className="stat-cell-lbl">Total</div></div>
             <div className="stat-cell"><div className="stat-cell-num">{trackers.length}</div><div className="stat-cell-lbl">Trackers</div></div>
-            <div className="stat-cell"><div className="stat-cell-num" style={{ color: "var(--teal)" }}>{pendingObservations}</div><div className="stat-cell-lbl">Pending</div></div>
+            <div className="stat-cell"><div className="stat-cell-num" style={{ color: "var(--teal)" }}>{trackerSamples.length}</div><div className="stat-cell-lbl">Samples</div></div>
           </div>
         </div>
 
@@ -261,7 +285,7 @@ export default function AdminDashboardPage() {
           {activityItems.length === 0 ? (
             <div style={{ padding: "16px", color: "var(--text4)" }}>Belum ada aktivitas terbaru</div>
           ) : (
-            activityItems.map((item, index) => (
+            activityItems.slice(0,3).map((item, index) => (
               <div className="feed-item" key={`${item.text}-${index}`}>
                 <div className={`feed-icon ${item.tone}`}><i className={item.icon}></i></div>
                 <div className="feed-body">
@@ -282,68 +306,49 @@ export default function AdminDashboardPage() {
               <button className="mini-btn">Manage all</button>
             </div>
           </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Role</th>
-                  <th>Trackers</th>
-                  <th>Joined</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan={5}>Loading...</td></tr>
-                ) : recentUsers.length === 0 ? (
-                  <tr><td colSpan={5}>Belum ada pengguna</td></tr>
-                ) : (
-                  recentUsers.map((user) => {
-                    const profile = profileMap.get(user.id);
-                    const name = profile?.name || user.user_metadata?.name || user.email || "User";
-                    return (
-                      <tr key={user.id}>
-                        <td>
-                          <div className="td-name">
-                            <div className="avatar-sm">{name.slice(0, 2).toUpperCase()}</div>
-                            {name}
-                          </div>
-                        </td>
-                        <td><span className="badge blue">{roleMap.get(user.id) || "user"}</span></td>
-                        <td>{trackerCountMap.get(user.id) || 0}</td>
-                        <td style={{ color: "var(--text4)" }}>{formatDate(user.created_at)}</td>
-                        <td><button className="mini-btn">Edit</button></td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+          <div style={{ padding: 12 }} className="simple-list">
+            {loading ? (
+              <div style={{ color: "var(--text4)" }}>Loading...</div>
+            ) : recentUsers.length === 0 ? (
+              <div style={{ color: "var(--text4)" }}>Belum ada pengguna</div>
+            ) : (
+              recentUsers.map((user) => {
+                const profile = profileMap.get(user.id);
+                const name = profile?.name || user.user_metadata?.name || user.email || "User";
+                return (
+                  <div key={user.id} className="simple-item">
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div className="avatar-sm">{name.slice(0, 2).toUpperCase()}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600 }}>{name}</div>
+                        <div style={{ fontSize: 12, color: "var(--text4)" }}>{formatDate(user.created_at)}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <button className="mini-btn">Edit</button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
         <div className="panel">
           <div className="panel-header">
-            <div className="panel-title"><i className="ti ti-chart-donut"></i> User Role Distribution</div>
+            <div className="panel-title"><i className="ti ti-chart-donut"></i> Role Distribution</div>
           </div>
-          <div className="donut-wrap">
-            <svg width="90" height="90" viewBox="0 0 90 90">
-              <circle cx="45" cy="45" r="35" fill="none" stroke="var(--bg3)" strokeWidth="14" />
-              <text x="45" y="48" textAnchor="middle" fontSize="12" fontFamily="Fraunces,serif" fill="var(--text)" fontWeight="500">
-                {users.length}
-              </text>
-            </svg>
-            <div className="donut-legend">
-              {Array.from(roleDistribution.entries()).map(([role, count]) => (
-                <div className="leg-item" key={role}>
-                  <div className="leg-dot" style={{ background: "var(--g500)" }}></div> {role} — {count}
+          <div style={{ padding: 12 }}>
+            {roleDistribution.size === 0 ? (
+              <div style={{ color: "var(--text4)" }}>belum ada data</div>
+            ) : (
+              Array.from(roleDistribution.entries()).map(([role, count]) => (
+                <div key={role} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
+                  <div style={{ color: "var(--text2)", fontWeight: 600 }}>{role}</div>
+                  <div style={{ color: "var(--text4)" }}>{count}</div>
                 </div>
-              ))}
-              {roleDistribution.size === 0 && (
-                <div className="leg-item"><div className="leg-dot" style={{ background: "var(--g500)" }}></div> belum ada data</div>
-              )}
-            </div>
+              ))
+            )}
           </div>
         </div>
       </div>

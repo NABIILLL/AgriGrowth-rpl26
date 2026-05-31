@@ -5,9 +5,18 @@ import Image from "next/image";
 import Link from "next/link";
 import GlobalHeader from "@/components/GlobalHeader";
 import { motion, Variants } from "framer-motion";
+import { toast } from "react-hot-toast";
 import { useUser } from "@/hooks/useUser";
+import { useSession } from "@clerk/nextjs";
 
 type JenisTanaman = "Padi" | "Jagung" | "Bawang Merah";
+
+type TrackerOption = {
+  id: string;
+  title: string;
+  plant_type: string;
+  created_at?: string | null;
+};
 
 type HasilAnalisis = {
   status: string;
@@ -22,19 +31,22 @@ type HasilAnalisis = {
   rawText?: string;
 };
 
-const TANAMAN_OPTIONS: { value: JenisTanaman; desc: string; image: string }[] = [
+const TANAMAN_OPTIONS: { value: JenisTanaman; slug: string; desc: string; image: string }[] = [
   {
     value: "Padi",
+    slug: "padi",
     desc: "Oryza sativa",
     image: "https://images.unsplash.com/photo-1574943320219-553eb213f72d?q=80&w=800&auto=format&fit=crop",
   },
   {
     value: "Jagung",
+    slug: "jagung",
     desc: "Zea mays",
     image: "https://images.unsplash.com/photo-1551754655-cd27e38d2076?q=80&w=800&auto=format&fit=crop",
   },
   {
     value: "Bawang Merah",
+    slug: "bawang",
     desc: "Allium cepa",
     image: "https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?q=80&w=800&auto=format&fit=crop",
   },
@@ -67,12 +79,26 @@ const fadeUpVariant: Variants = {
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 70, damping: 15 } as const },
 };
 
+const getPlantSlug = (value: JenisTanaman | null) => {
+  const option = TANAMAN_OPTIONS.find((item) => item.value === value);
+  return option?.slug || "";
+};
+
 const imgLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
+
+async function createAuthHeaders(session: ReturnType<typeof useSession>["session"]) {
+  const token = await session?.getToken().catch(() => null);
+  return token ? { Authorization: `Bearer ${token}` } : undefined;
+}
 
 export default function AnalisisPenyakitPage() {
   const { user, isLoading } = useUser();
+  const { session } = useSession();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedTanaman, setSelectedTanaman] = useState<JenisTanaman | null>(null);
+  const [trackers, setTrackers] = useState<TrackerOption[]>([]);
+  const [trackersLoading, setTrackersLoading] = useState(false);
+  const [selectedTrackerId, setSelectedTrackerId] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isAnalisisLoading, setIsAnalisisLoading] = useState(false);
@@ -84,6 +110,27 @@ export default function AnalisisPenyakitPage() {
   const [rateLimitTotal, setRateLimitTotal] = useState<number>(60);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedTracker = trackers.find((tracker) => tracker.id === selectedTrackerId) || null;
+
+  const handleSelectTanaman = (value: JenisTanaman) => {
+    setSelectedTanaman(value);
+    setTrackers([]);
+    setSelectedTrackerId(null);
+    setImageFile(null);
+    setImagePreview(null);
+    setHasil(null);
+    setError(null);
+    setStep(1);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleSelectTracker = (trackerId: string) => {
+    setSelectedTrackerId(trackerId);
+    setStep(2);
+    setHasil(null);
+    setError(null);
+  };
 
   // ✅ Countdown timer — berkurang setiap detik, reset ke null saat habis
   useEffect(() => {
@@ -118,7 +165,7 @@ export default function AnalisisPenyakitPage() {
   };
 
   const handleAnalisis = async () => {
-    if (!imageFile || !selectedTanaman) return;
+    if (!imageFile || !selectedTanaman || !selectedTrackerId) return;
     setIsAnalisisLoading(true);
     setError(null);
     try {
@@ -135,6 +182,7 @@ export default function AnalisisPenyakitPage() {
               imageBase64: base64,
               mimeType: imageFile.type,
               jenisTanaman: selectedTanaman,
+              trackerId: selectedTrackerId,
             }),
           });
 
@@ -172,6 +220,9 @@ export default function AnalisisPenyakitPage() {
             setHasil(hasilData);
           }
           setStep(3);
+          if (data?.savedAnalysis) {
+            toast.success("Hasil analisis tersimpan ke monitoring lahan", { id: "Hasil analisis tersimpan ke monitoring lahan" });
+          }
           setIsAnalisisLoading(false);
         } catch {
           setError("Gagal menghubungi server. Periksa koneksi internet kamu.");
@@ -187,6 +238,8 @@ export default function AnalisisPenyakitPage() {
   const handleReset = () => {
     setStep(1);
     setSelectedTanaman(null);
+    setSelectedTrackerId(null);
+    setTrackers([]);
     setImageFile(null);
     setImagePreview(null);
     setHasil(null);
@@ -199,6 +252,56 @@ export default function AnalisisPenyakitPage() {
     rateLimitCountdown !== null
       ? Math.round((rateLimitCountdown / rateLimitTotal) * 100)
       : 0;
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadTrackers = async () => {
+      if (!selectedTanaman || !user) {
+        setTrackers([]);
+        setTrackersLoading(false);
+        return;
+      }
+
+      setTrackersLoading(true);
+      try {
+        const response = await fetch(
+          `/api/observation/history?plantType=${encodeURIComponent(getPlantSlug(selectedTanaman))}`,
+          {
+            headers: await createAuthHeaders(session),
+            credentials: "include",
+          }
+        );
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data?.error || "Gagal memuat lahan");
+        }
+
+        if (!mounted) return;
+
+        const fetchedTrackers = (data.trackers || []) as TrackerOption[];
+        setTrackers(fetchedTrackers);
+        setSelectedTrackerId((prev) => {
+          if (prev && fetchedTrackers.some((tracker) => tracker.id === prev)) return prev;
+          return null;
+        });
+      } catch (fetchError) {
+        console.error("Error loading disease trackers:", fetchError);
+        if (!mounted) return;
+        setTrackers([]);
+        setSelectedTrackerId(null);
+      } finally {
+        if (mounted) setTrackersLoading(false);
+      }
+    };
+
+    loadTrackers();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedTanaman, user, session]);
 
   return (
     <div className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
@@ -240,7 +343,7 @@ export default function AnalisisPenyakitPage() {
               {TANAMAN_OPTIONS.map((t) => (
                 <button
                   key={t.value}
-                  onClick={() => setSelectedTanaman(t.value)}
+                  onClick={() => handleSelectTanaman(t.value)}
                   className={`group relative h-[130px] overflow-hidden rounded-[16px] transition-all ${
                     selectedTanaman === t.value
                       ? "ring-[3px] ring-[#365a1a] shadow-[-4px_4px_12px_rgba(0,0,0,0.3)]"
@@ -261,11 +364,78 @@ export default function AnalisisPenyakitPage() {
                 </button>
               ))}
             </div>
+
+            {selectedTanaman && (
+              <div className="mt-5 rounded-2xl border border-[#d9d9d9] bg-[#fafcf7] p-4 sm:p-5">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h3 className="font-semibold text-gray-700">Daftar Lahan Akun</h3>
+                    <p className="text-xs text-gray-500 mt-1">Pilih lahan untuk menyimpan hasil analisis ke monitoring lahan tersebut.</p>
+                  </div>
+                  {selectedTracker && (
+                    <span className="rounded-full bg-[#365a1a] px-3 py-1 text-xs font-semibold text-white">
+                      Terpilih: {selectedTracker.title}
+                    </span>
+                  )}
+                </div>
+
+                {trackersLoading ? (
+                  <div className="rounded-xl border border-dashed border-[#cfd8c6] bg-white px-4 py-6 text-center text-sm text-gray-500">
+                    Memuat lahan...
+                  </div>
+                ) : trackers.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[#cfd8c6] bg-white px-4 py-6 text-center">
+                    <p className="font-semibold text-gray-700">Belum ada lahan untuk tanaman ini</p>
+                    <p className="mt-1 text-sm text-gray-500">Buat tracker lahan terlebih dahulu di dashboard.</p>
+                    <Link href="/dashboard" className="mt-4 inline-flex rounded-full bg-[#365a1a] px-4 py-2 text-sm font-bold text-white hover:bg-[#2d4915] transition">
+                      Buka Dashboard
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {trackers.map((tracker) => {
+                      const active = tracker.id === selectedTrackerId;
+                      return (
+                        <button
+                          key={tracker.id}
+                          type="button"
+                          onClick={() => handleSelectTracker(tracker.id)}
+                          className={`rounded-xl border p-4 text-left transition ${active ? "border-[#365a1a] bg-white shadow-md" : "border-[#d9e4cf] bg-white hover:border-[#9fb08d]"}`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-[#365a1a]">{tracker.title}</p>
+                              <p className="mt-1 text-xs text-[#365a1a]/70 capitalize">{tracker.plant_type}</p>
+                            </div>
+                            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${active ? "bg-[#365a1a] text-white" : "bg-[#f0f4eb] text-[#365a1a]"}`}>
+                              {active ? "Dipilih" : "Pilih"}
+                            </span>
+                          </div>
+                          <p className="mt-3 text-xs text-gray-500">
+                            Dibuat: {tracker.created_at ? new Date(tracker.created_at).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) : "-"}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </motion.div>
 
           {/* STEP 2 — Upload Foto */}
-          <motion.div variants={fadeUpVariant} className={`bg-white rounded-2xl shadow-sm border border-[#d9d9d9] p-6 mb-4 transition-opacity ${!selectedTanaman ? "opacity-50 pointer-events-none" : ""}`}>
+          <motion.div variants={fadeUpVariant} className={`bg-white rounded-2xl shadow-sm border border-[#d9d9d9] p-6 mb-4 transition-opacity ${!selectedTrackerId ? "opacity-50 pointer-events-none" : ""}`}>
             <h2 className="font-semibold text-gray-700 mb-4">2. Upload Foto Tanaman</h2>
+            {!selectedTrackerId && (
+              <div className="mb-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                Pilih lahan terlebih dahulu agar hasil analisis bisa langsung disimpan ke monitoring lahan.
+              </div>
+            )}
+            {selectedTracker && (
+              <div className="mb-4 rounded-xl bg-[#f0f4eb] px-4 py-3 text-sm text-[#365a1a]">
+                Lahan aktif: <span className="font-semibold">{selectedTracker.title}</span>
+              </div>
+            )}
             {imagePreview ? (
               <div className="relative">
                 <Image src={imagePreview} alt="Preview tanaman" width={600} height={300} className="w-full h-56 object-cover rounded-xl" />
@@ -284,7 +454,7 @@ export default function AnalisisPenyakitPage() {
               </div>
             ) : (
               <div
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => selectedTrackerId && fileInputRef.current?.click()}
                 className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#365a1a] hover:bg-[#f0f5ea] transition-all"
               >
                 <div className="text-4xl mb-2">📷</div>
@@ -326,7 +496,7 @@ export default function AnalisisPenyakitPage() {
           )}
 
           {/* Tombol Analisis */}
-          {step === 2 && imageFile && selectedTanaman && (
+          {step === 2 && imageFile && selectedTanaman && selectedTrackerId && (
             <motion.div variants={fadeUpVariant}>
               <button
               onClick={handleAnalisis}
@@ -458,6 +628,15 @@ export default function AnalisisPenyakitPage() {
                 <p className="text-xs text-gray-400 text-center px-4">
                   ⚠️ Hasil ini merupakan estimasi AI dan bukan pengganti konsultasi dengan ahli pertanian.
                 </p>
+              )}
+
+              {selectedTrackerId && selectedTanaman && (
+                <Link
+                  href={`/observation/${getPlantSlug(selectedTanaman)}/history?trackerId=${encodeURIComponent(selectedTrackerId)}`}
+                  className="block w-full rounded-xl border-2 border-[#365a1a] bg-white py-3.5 text-center font-semibold text-[#365a1a] hover:bg-[#f0f5ea] transition-all"
+                >
+                  Lihat hasil di Monitoring Lahan
+                </Link>
               )}
 
               <button
