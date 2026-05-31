@@ -1060,7 +1060,7 @@ export default function ObservationHistoryPage() {
           margin: { left: 14, right: 14 }
         });
         
-        finalY = (doc as any).lastAutoTable.finalY + 15;
+        finalY = ((doc as any).lastAutoTable?.finalY ?? ((doc as any).autoTable?.previous?.finalY) ?? (finalY + 20)) + 15;
 
         // Rincian Per Sampel
         if (sampleLogsRaw && sampleLogsRaw.length > 0) {
@@ -1097,7 +1097,7 @@ export default function ObservationHistoryPage() {
             margin: { left: 14, right: 14 }
           });
           
-          finalY = (doc as any).lastAutoTable.finalY + 15;
+          finalY = ((doc as any).lastAutoTable?.finalY ?? ((doc as any).autoTable?.previous?.finalY) ?? (finalY + 20)) + 15;
         }
       }
 
@@ -1130,7 +1130,7 @@ export default function ObservationHistoryPage() {
           margin: { left: 14, right: 14 }
         });
         
-        finalY = (doc as any).lastAutoTable.finalY + 10;
+        finalY = ((doc as any).lastAutoTable?.finalY ?? ((doc as any).autoTable?.previous?.finalY) ?? (finalY + 20)) + 10;
         
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
