@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
+import GlobalHeader from "@/components/GlobalHeader";
+import { motion, Variants } from "framer-motion";
 import { useUser } from "@/hooks/useUser";
 
 type JenisTanaman = "Padi" | "Jagung" | "Bawang Merah";
@@ -51,6 +52,19 @@ const URGENSI_COLOR: Record<string, string> = {
   "Dalam 1-2 Minggu": "bg-yellow-500 text-white",
   "Pantau Saja": "bg-blue-500 text-white",
   "Tidak Perlu Tindakan": "bg-[#365a1a] text-white",
+};
+
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.15 },
+  },
+};
+
+const fadeUpVariant: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 70, damping: 15 } as const },
 };
 
 const imgLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
@@ -190,43 +204,24 @@ export default function AnalisisPenyakitPage() {
     <div className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
 
       {/* Header */}
-      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
-        <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition">
-          <img alt="Agrigrowth logo" loading="lazy" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
-          <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
-        </Link>
-
-        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
-          <Link href="/" className="transition hover:opacity-80">Home</Link>
-          <Link href="/about" className="transition hover:opacity-80">About</Link>
-          <Link href="/growth-tracker" className="transition hover:opacity-80">Growth Tracker</Link>
-          <Link href="/weather" className="transition hover:opacity-80">Weather</Link>
-          <Link href="/history" className="transition hover:opacity-80">History</Link>
-          <Link href="/analisis-penyakit" className="border-b-2 border-[#365a1a]">Analisis Penyakit</Link>
-        </nav>
-
-        {!isLoading && user ? (
-          <div className="flex items-center gap-4">
-            <UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} />
-          </div>
-        ) : (
-          <Link href="/" className="rounded-full bg-[#365a1a] px-5 py-2 text-[16px] font-medium text-white shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:bg-[#2d4915] sm:text-[18px]">
-            Login / Sign Up
-          </Link>
-        )}
-      </header>
+      <GlobalHeader variant="light" />
 
       {/* Konten */}
-      <div className="py-8 px-4">
+      <motion.section 
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="py-8 px-4"
+      >
         <div className="max-w-2xl mx-auto">
 
-          <div className="mb-8">
+          <motion.div variants={fadeUpVariant} className="mb-8">
             <h1 className="text-2xl font-bold text-gray-800">🔬 Analisis Penyakit Tanaman</h1>
             <p className="text-gray-500 mt-1 text-sm">Upload foto tanamanmu dan AI akan mendeteksi penyakit secara otomatis.</p>
-          </div>
+          </motion.div>
 
           {/* Step Indicator */}
-          <div className="flex items-center gap-2 mb-8">
+          <motion.div variants={fadeUpVariant} className="flex items-center gap-2 mb-8">
             {[{ num: 1, label: "Pilih Tanaman" }, { num: 2, label: "Upload Foto" }, { num: 3, label: "Hasil Analisis" }].map((s, i) => (
               <div key={s.num} className="flex items-center gap-2 flex-1">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${step >= s.num ? "bg-[#365a1a] text-white" : "bg-gray-200 text-gray-400"}`}>
@@ -236,10 +231,10 @@ export default function AnalisisPenyakitPage() {
                 {i < 2 && <div className={`flex-1 h-0.5 ${step > s.num ? "bg-[#365a1a]" : "bg-gray-200"}`} />}
               </div>
             ))}
-          </div>
+          </motion.div>
 
           {/* STEP 1 — Pilih Tanaman */}
-          <div className="bg-white rounded-2xl shadow-sm border border-[#d9d9d9] p-6 mb-4">
+          <motion.div variants={fadeUpVariant} className="bg-white rounded-2xl shadow-sm border border-[#d9d9d9] p-6 mb-4">
             <h2 className="font-semibold text-gray-700 mb-4">1. Pilih Jenis Tanaman</h2>
             <div className="grid grid-cols-3 gap-3">
               {TANAMAN_OPTIONS.map((t) => (
@@ -266,10 +261,10 @@ export default function AnalisisPenyakitPage() {
                 </button>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* STEP 2 — Upload Foto */}
-          <div className={`bg-white rounded-2xl shadow-sm border border-[#d9d9d9] p-6 mb-4 transition-opacity ${!selectedTanaman ? "opacity-50 pointer-events-none" : ""}`}>
+          <motion.div variants={fadeUpVariant} className={`bg-white rounded-2xl shadow-sm border border-[#d9d9d9] p-6 mb-4 transition-opacity ${!selectedTanaman ? "opacity-50 pointer-events-none" : ""}`}>
             <h2 className="font-semibold text-gray-700 mb-4">2. Upload Foto Tanaman</h2>
             {imagePreview ? (
               <div className="relative">
@@ -298,11 +293,11 @@ export default function AnalisisPenyakitPage() {
               </div>
             )}
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleImageChange} className="hidden" />
-          </div>
+          </motion.div>
 
           {/* ✅ Rate Limit Banner dengan countdown + progress bar */}
           {rateLimitCountdown !== null && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
+            <motion.div variants={fadeUpVariant} className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
               <div className="flex items-start gap-3">
                 <span className="text-xl mt-0.5">⏱️</span>
                 <div className="flex-1">
@@ -320,19 +315,20 @@ export default function AnalisisPenyakitPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Error biasa */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-4 mb-4 text-sm">
+            <motion.div variants={fadeUpVariant} className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-4 mb-4 text-sm">
               ⚠️ {error}
-            </div>
+            </motion.div>
           )}
 
           {/* Tombol Analisis */}
           {step === 2 && imageFile && selectedTanaman && (
-            <button
+            <motion.div variants={fadeUpVariant}>
+              <button
               onClick={handleAnalisis}
               disabled={isAnalisisLoading || rateLimitCountdown !== null}
               className="w-full bg-[#365a1a] hover:bg-[#2d4915] text-white font-semibold py-4 rounded-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -351,12 +347,13 @@ export default function AnalisisPenyakitPage() {
               ) : (
                 "Mulai Analisis"
               )}
-            </button>
+              </button>
+            </motion.div>
           )}
 
           {/* STEP 3 — Hasil Analisis */}
           {step === 3 && hasil && (
-            <div className="space-y-4">
+            <motion.div variants={fadeUpVariant} className="space-y-4">
 
               {/* ✅ Banner foto tidak valid — tampilkan detectedAs */}
               {hasil.status === "Foto Tidak Valid" && (
@@ -470,11 +467,11 @@ export default function AnalisisPenyakitPage() {
                 {hasil.status === "Foto Tidak Valid" ? "🔄 Upload Foto Ulang" : "🔄 Analisis Tanaman Lain"}
               </button>
 
-            </div>
+            </motion.div>
           )}
 
         </div>
-      </div>
+      </motion.section>
     </div>
   );
 }

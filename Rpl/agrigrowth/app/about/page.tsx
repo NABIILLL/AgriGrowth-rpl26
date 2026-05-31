@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
-import { useClerk, UserButton } from "@clerk/nextjs";
+import { useClerk } from "@clerk/nextjs";
+import GlobalHeader from "@/components/GlobalHeader";
 import { useState } from "react";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
-import AgrigrowthLogo from "../../components/AgrigrowthLogo";
+
 import { motion, Variants } from "framer-motion";
 
 const staggerContainer: Variants = {
@@ -38,91 +39,7 @@ export default function About() {
 
   return (
     <main className="min-h-screen bg-white text-[#365a1a]">
-      {/* Header */}
-      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-2 sm:gap-4 px-5 py-4 sm:py-6 sm:px-10 lg:px-14">
-        <AgrigrowthLogo
-          tone="light"
-          textClassName="text-[20px] font-bold leading-none text-[#365a1a] sm:text-[21px]"
-        />
-
-        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
-          <Link href="/" className="transition hover:opacity-80">
-            Home
-          </Link>
-          <Link href="/about" className="border-b-2 border-[#365a1a]">
-            About
-          </Link>
-          <Link href="/growth-tracker" className="transition hover:opacity-80">
-            Growth Tracker
-          </Link>
-          <Link href="/weather" className="transition hover:opacity-80">
-            Weather
-          </Link>
-          <Link href="/history" className="transition hover:opacity-80">
-            History
-          </Link>
-          <Link href="/analisis-penyakit" className="transition hover:opacity-80">
-            Analisis Penyakit
-          </Link>
-        </nav>
-
-        <div className="flex items-center gap-3 min-h-[48px]">
-          {!isLoading && (
-            user ? (
-              <div className="hidden sm:flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4">
-                <UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} />
-              </div>
-            ) : (
-              <button onClick={() => openSignIn()} className="hidden sm:block rounded-full bg-[#365a1a] px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm md:text-base font-medium text-white shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] hover:bg-[#2d4915] transition">
-                Login / Sign Up
-              </button>
-            )
-          )}
-
-          {/* Mobile menu toggle */}
-          <button
-            aria-label="Toggle menu"
-            onClick={() => setMobileOpen((s) => !s)}
-            className="inline-flex items-center justify-center rounded-md p-2 text-[#365a1a] sm:hidden"
-          >
-            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-
-        {/* Mobile menu panel */}
-        {mobileOpen && (
-          <div className="sm:hidden absolute right-4 top-16 z-20 w-64 rounded-md bg-white border border-[#e0e0e0] p-4 shadow-lg">
-            <nav className="flex flex-col gap-3">
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/">Home</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/about">About</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/growth-tracker">Growth Tracker</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/weather">Weather</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/history">History</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-[#365a1a] hover:opacity-80" href="/analisis-penyakit">Analisis Penyakit</Link>
-            </nav>
-
-            <div className="mt-3 border-t border-[#e0e0e0] pt-3">
-              {!isLoading ? (
-                user ? (
-                  <div className="flex flex-col gap-2">
-                    <UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} />
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setMobileOpen(false);
-                      openSignIn();
-                    }}
-                    className="w-full rounded-full bg-[#365a1a] px-3 py-2 text-sm font-medium text-white hover:bg-[#2d4915] transition"
-                  >
-                    Login / Sign Up
-                  </button>
-                )
-              ) : null}
-            </div>
-          </div>
-        )}
-      </header>
+      <GlobalHeader variant="light" />
 
       {/* Content */}
       <motion.section 

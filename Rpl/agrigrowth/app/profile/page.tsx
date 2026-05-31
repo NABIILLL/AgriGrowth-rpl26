@@ -21,7 +21,8 @@ import {
 } from "lucide-react";
 
 import { useUser } from "@/hooks/useUser";
-import { useClerk, UserButton } from "@clerk/nextjs";
+import { useClerk } from "@clerk/nextjs";
+import GlobalHeader from "@/components/GlobalHeader";
 import ProfileEditor from "@/components/ProfileEditor";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { motion, Variants } from "framer-motion";
@@ -130,45 +131,7 @@ export default function ProfilePage() {
         onClose={() => setIsEditModalOpen(false)}
       />
 
-      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
-        <div className="flex items-center gap-2.5">
-          <img alt="Agrigrowth logo" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
-          <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
-        </div>
-
-        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
-          <Link href="/" className="transition hover:opacity-80">
-            Home
-          </Link>
-          <Link href="/about" className="transition hover:opacity-80">
-            About
-          </Link>
-          <Link href="/growth-tracker" className="transition hover:opacity-80">
-            Growth Tracker
-          </Link>
-          <Link href="/weather" className="transition hover:opacity-80">
-            Weather
-          </Link>
-          <Link href="/history" className="transition hover:opacity-80">
-            History
-          </Link>
-        </nav>
-
-        {!isLoading && (
-          user ? (
-            <div className="flex items-center gap-4 min-h-[48px]">
-              <UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} />
-            </div>
-          ) : (
-            <button
-              onClick={() => openSignIn()}
-              className="rounded-full bg-[#365a1a] px-5 py-2 text-[16px] font-medium text-white shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:bg-[#2d4915] sm:text-[18px]"
-            >
-              Login / Sign Up
-            </button>
-          )
-        )}
-      </header>
+      <GlobalHeader variant="light" />
 
       <motion.section 
         variants={staggerContainer}

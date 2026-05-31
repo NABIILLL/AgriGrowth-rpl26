@@ -8,8 +8,7 @@ import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 import { Trash2 } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
-
+import GlobalHeader from "@/components/GlobalHeader";
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -114,46 +113,7 @@ export default function History() {
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       {/* Header */}
-      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
-        <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition">
-          <img alt="Agrigrowth logo" loading="lazy" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
-          <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
-        </Link>
-
-        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-10 text-[21px] font-bold lg:flex">
-          <Link href="/" className="hover:opacity-80 transition">
-            Home
-          </Link>
-          <Link href="/about" className="hover:opacity-80 transition">
-            About
-          </Link>
-          <Link href="/growth-tracker" className="hover:opacity-80 transition">
-            Growth Tracker
-          </Link>
-          <Link href="/weather" className="hover:opacity-80 transition">
-            Weather
-          </Link>
-          <Link href="/history" className="hover:opacity-80 transition">
-            History
-          </Link>
-          <Link href="/analisis-penyakit" className="transition hover:opacity-80">
-            Analisis Penyakit
-          </Link>
-        </nav>
-
-        {!isLoading && (
-          user ? (
-            <div className="flex items-center gap-4"><UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
-          ) : (
-            <Link
-              href="/"
-              className="rounded-full bg-[#365a1a] px-5 py-2 text-[16px] font-medium text-white shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:bg-[#2d4915] sm:text-[18px]"
-            >
-              Login / Sign Up
-            </Link>
-          )
-        )}
-      </header>
+      <GlobalHeader variant="light" />
 
       {/* Content */}
       <motion.section 

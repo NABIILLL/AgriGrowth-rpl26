@@ -68,7 +68,7 @@ export default function Wireframe4() {
 					<b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
 				</div>
 
-				<nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
+				<nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-6 text-[15px] xl:text-[16px] font-bold lg:flex whitespace-nowrap">
 					<Link href="/" className="hover:opacity-80 transition">Home</Link>
 					<Link href="/about" className="hover:opacity-80 transition">About</Link>
 					<Link href="/growth-tracker" className="hover:opacity-80 transition">Growth Tracker</Link>

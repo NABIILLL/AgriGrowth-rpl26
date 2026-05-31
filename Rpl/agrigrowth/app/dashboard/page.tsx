@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 import { motion, Variants } from "framer-motion";
 import { UserButton } from "@clerk/nextjs";
+import GlobalHeader from "@/components/GlobalHeader";
 
 // Animation variants
 const staggerContainer: Variants = {
@@ -232,32 +233,7 @@ export default function Dashboard() {
     return (
       <main className="min-h-screen bg-[#b8b8b8] text-[#365a1a]">
         <div className="mx-auto min-h-screen w-full max-w-[1440px] bg-white px-5 pb-10 pt-6 sm:px-10 lg:px-14">
-          <header className="relative z-50 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <img alt="Agrigrowth logo" loading="lazy" className="h-[51px] w-[59px] object-contain" src={imgResultLogo} />
-              <b className="text-[16px] leading-none sm:text-[18px] lg:text-[21px]">Agrigrowth Monitor</b>
-            </div>
-
-            <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
-              <Link href="/" className="transition hover:opacity-80">
-                Home
-              </Link>
-              <Link href="/about" className="transition hover:opacity-80">
-                About
-              </Link>
-              <Link href="/growth-tracker" className="transition hover:opacity-80">
-                Growth Tracker
-              </Link>
-              <Link href="/weather" className="transition hover:opacity-80">
-                Weather
-              </Link>
-              <Link href="/history" className="transition hover:opacity-80">
-                History
-              </Link>
-            </nav>
-
-            <div className="flex items-center gap-4"><UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
-          </header>
+          <GlobalHeader variant="light" />
 
           <h1 className="mt-6 text-center text-[32px] font-extrabold leading-tight sm:text-[40px] lg:text-[56px]">
             Result of ‘{activeTrackerTitle || "Sawah belakang kampus"}’
@@ -343,32 +319,7 @@ export default function Dashboard() {
   if (showAnalysisForm) {
     return (
       <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
-        <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
-          <div className="flex items-center gap-2.5">
-            <img alt="Agrigrowth logo" loading="lazy" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
-            <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
-          </div>
-
-          <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
-            <Link href="/" className="transition hover:opacity-80">
-              Home
-            </Link>
-            <Link href="/about" className="transition hover:opacity-80">
-              About
-            </Link>
-            <Link href="/growth-tracker" className="border-b-2 border-[#365a1a]">
-              Growth Tracker
-            </Link>
-            <Link href="/weather" className="transition hover:opacity-80">
-              Weather
-            </Link>
-            <Link href="/history" className="transition hover:opacity-80">
-              History
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-4"><UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
-        </header>
+        <GlobalHeader variant="light" />
 
         <section className="mx-auto w-full max-w-[1440px] px-5 pb-12 sm:px-10 lg:px-14">
           <div className="mx-auto w-full max-w-[1280px]">
@@ -460,32 +411,7 @@ export default function Dashboard() {
 
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
-      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
-        <div className="flex items-center gap-2.5">
-          <img alt="Agrigrowth logo" loading="lazy" className="h-[51px] w-[59px] object-contain" src={imgLogo} />
-          <b className="text-[20px] leading-none sm:text-[21px]">Agrigrowth Monitor</b>
-        </div>
-
-        <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-8 text-base font-semibold lg:flex">
-          <Link href="/" className="transition hover:opacity-80">
-            Home
-          </Link>
-          <Link href="/about" className="transition hover:opacity-80">
-            About
-          </Link>
-          <Link href="/growth-tracker" className="border-b-2 border-[#365a1a]">
-            Growth Tracker
-          </Link>
-          <Link href="/weather" className="transition hover:opacity-80">
-            Weather
-          </Link>
-          <Link href="/history" className="transition hover:opacity-80">
-            History
-          </Link>
-        </nav>
-
-        <div className="flex items-center gap-4"><UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
-      </header>
+      <GlobalHeader variant="light" />
 
       <motion.section 
         variants={staggerContainer}
