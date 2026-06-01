@@ -164,73 +164,127 @@ export default function AnalisisPenyakitPage() {
     setStep(2);
   };
 
+  const buildOptimizedImagePayload = async (file: File) => {
+    const MAX_DIMENSION = 1400;
+    const JPEG_QUALITY = 0.78;
+
+    const imageUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Gagal membaca gambar"));
+      reader.readAsDataURL(file);
+    });
+
+    if (!imageUrl) {
+      throw new Error("Gagal memproses gambar");
+    }
+
+    const compressed = await new Promise<{ base64: string; mimeType: string }>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        const { naturalWidth: width, naturalHeight: height } = image;
+        const scale = Math.min(1, MAX_DIMENSION / Math.max(width, height));
+        const targetWidth = Math.max(1, Math.round(width * scale));
+        const targetHeight = Math.max(1, Math.round(height * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+
+        const context = canvas.getContext("2d");
+        if (!context) {
+          reject(new Error("Canvas tidak tersedia"));
+          return;
+        }
+
+        context.drawImage(image, 0, 0, targetWidth, targetHeight);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Gagal mengompres gambar"));
+              return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+              const dataUrl = String(reader.result || "");
+              resolve({
+                base64: dataUrl.split(",")[1] || "",
+                mimeType: blob.type || "image/jpeg",
+              });
+            };
+            reader.onerror = () => reject(new Error("Gagal membaca hasil kompresi"));
+            reader.readAsDataURL(blob);
+          },
+          "image/jpeg",
+          JPEG_QUALITY,
+        );
+      };
+      image.onerror = () => reject(new Error("Gagal memuat gambar"));
+      image.src = imageUrl;
+    });
+
+    return compressed;
+  };
+
   const handleAnalisis = async () => {
     if (!imageFile || !selectedTanaman || !selectedTrackerId) return;
     setIsAnalisisLoading(true);
     setError(null);
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(imageFile);
-      reader.onload = async () => {
-        const dataUrl = reader.result as string;
-        const base64 = dataUrl.split(",")[1];
-        try {
-          const response = await fetch("/api/analisis-penyakit", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              imageBase64: base64,
-              mimeType: imageFile.type,
-              jenisTanaman: selectedTanaman,
-              trackerId: selectedTrackerId,
-            }),
-          });
+      const { base64, mimeType } = await buildOptimizedImagePayload(imageFile);
 
-          const data = await response.json();
+      const response = await fetch("/api/analisis-penyakit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: base64,
+          mimeType,
+          jenisTanaman: selectedTanaman,
+          trackerId: selectedTrackerId,
+        }),
+      });
 
-          // ✅ Handle 429 — tampilkan countdown dari retryAfter yang dikirim server
-          if (response.status === 429) {
-            const waitTime = data.retryAfter ?? 60;
-            setRateLimitTotal(waitTime);
-            setRateLimitCountdown(waitTime);
-            setIsAnalisisLoading(false);
-            return;
-          }
+      const data = await response.json();
 
-          if (!response.ok) {
-            setError(data.error || "Terjadi kesalahan pada AI. Coba lagi.");
-            setIsAnalisisLoading(false);
-            return;
-          }
+      // ✅ Handle 429 — tampilkan countdown dari retryAfter yang dikirim server
+      if (response.status === 429) {
+        const waitTime = data.retryAfter ?? 60;
+        setRateLimitTotal(waitTime);
+        setRateLimitCountdown(waitTime);
+        setIsAnalisisLoading(false);
+        return;
+      }
 
-          const hasilData: HasilAnalisis = data.hasil;
-          if (hasilData.rawText) {
-            setHasil({
-              status: "Perlu Perhatian",
-              diagnosis: "Lihat hasil lengkap di bawah",
-              tingkatKeparahan: "-",
-              gejala: [],
-              penyebab: "",
-              solusi: [],
-              pencegahan: [],
-              urgensi: "Pantau Saja",
-              rawText: hasilData.rawText,
-            });
-          } else {
-            setHasil(hasilData);
-          }
-          setStep(3);
-          if (data?.savedAnalysis) {
-            toast.success("Hasil analisis tersimpan ke monitoring lahan", { id: "Hasil analisis tersimpan ke monitoring lahan" });
-          }
-          setIsAnalisisLoading(false);
-        } catch {
-          setError("Gagal menghubungi server. Periksa koneksi internet kamu.");
-          setIsAnalisisLoading(false);
-        }
-      };
+      if (!response.ok) {
+        setError(data.error || "Terjadi kesalahan pada AI. Coba lagi.");
+        setIsAnalisisLoading(false);
+        return;
+      }
+
+      const hasilData: HasilAnalisis = data.hasil;
+      if (hasilData.rawText) {
+        setHasil({
+          status: "Perlu Perhatian",
+          diagnosis: "Lihat hasil lengkap di bawah",
+          tingkatKeparahan: "-",
+          gejala: [],
+          penyebab: "",
+          solusi: [],
+          pencegahan: [],
+          urgensi: "Pantau Saja",
+          rawText: hasilData.rawText,
+        });
+      } else {
+        setHasil(hasilData);
+      }
+      setStep(3);
+      if (data?.savedAnalysis) {
+        toast.success("Hasil analisis tersimpan ke monitoring lahan", { id: "Hasil analisis tersimpan ke monitoring lahan" });
+      }
+      setIsAnalisisLoading(false);
     } catch {
-      setError("Terjadi kesalahan. Coba lagi.");
+      setError("Gagal mengirim gambar analisis. Coba pakai foto yang lebih kecil atau lebih jelas.");
       setIsAnalisisLoading(false);
     }
   };

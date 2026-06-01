@@ -3,7 +3,22 @@ import { getRequester, getSupabaseService } from "../admin/_utils";
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageBase64, mimeType, jenisTanaman, trackerId } = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch (error: any) {
+      const message = String(error?.message || error || "");
+      if (/body|payload|json|limit|size|too large/i.test(message)) {
+        return NextResponse.json(
+          { error: "Foto terlalu besar untuk diproses. Coba upload gambar yang lebih kecil atau lebih tajam." },
+          { status: 413 }
+        );
+      }
+
+      throw error;
+    }
+
+    const { imageBase64, mimeType, jenisTanaman, trackerId } = body;
 
     if (!imageBase64 || !jenisTanaman) {
       return NextResponse.json(
@@ -280,6 +295,13 @@ Gunakan Bahasa Indonesia yang jelas untuk petani. Diagnosis harus SPESIFIK berda
     return NextResponse.json({ hasil });
   } catch (err) {
     console.error("Error analisis penyakit:", err);
+    const message = String((err as Error)?.message || err || "");
+    if (/body|payload|json|limit|size|too large/i.test(message)) {
+      return NextResponse.json(
+        { error: "Foto terlalu besar untuk diproses. Coba upload gambar yang lebih kecil atau lebih tajam." },
+        { status: 413 }
+      );
+    }
     return NextResponse.json(
       { error: "Terjadi kesalahan server." },
       { status: 500 }
