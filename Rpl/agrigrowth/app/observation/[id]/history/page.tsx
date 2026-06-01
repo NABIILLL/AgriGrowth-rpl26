@@ -19,7 +19,9 @@ import {
   ResponsiveContainer
 } from "recharts";
 import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import * as htmlToImage from "html-to-image";
+import * as XLSX from "xlsx";
 import { motion, Variants } from "framer-motion";
 
 const staggerContainer: Variants = {
@@ -44,14 +46,7 @@ const fadeUpVariant: Variants = {
 const imgLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
 const imgProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 
-const autoTable = (doc: jsPDF, options: any) => {
-  const plugin = (doc as any).autoTable;
-  if (typeof plugin === "function") {
-    return plugin.call(doc, options);
-  }
 
-  return null;
-};
 
 interface TrackerData {
   id: string;
@@ -1197,27 +1192,9 @@ export default function ObservationHistoryPage() {
     }
 
     try {
-      const escapeCsv = (value: any) => {
-        const text = String(value ?? "");
-        return `"${text.replace(/"/g, '""')}"`;
-      };
-
-      const rows: string[] = [];
+      const wb = XLSX.utils.book_new();
 
       if (logsRaw.length > 0) {
-        rows.push("PERTUMBUHAN");
-        rows.push([
-          "Hari Ke",
-          "Tinggi Tanaman (cm)",
-          "Jumlah Daun",
-          "Jumlah Cabang",
-          "pH Tanah",
-          "Kondisi Cahaya",
-          "Kondisi Tanaman",
-          "Jenis Pupuk",
-          "Luas Lahan (Ha)",
-        ].map(escapeCsv).join(","));
-
         const growthData = logsRaw.map(log => ({
           "Hari Ke": log.day_number,
           "Tinggi Tanaman (cm)": log.plant_height,
@@ -1229,26 +1206,10 @@ export default function ObservationHistoryPage() {
           "Jenis Pupuk": log.fertilizer_type,
           "Luas Lahan (Ha)": log.land_area
         }));
-        growthData.forEach((row) => {
-          rows.push(Object.values(row).map(escapeCsv).join(","));
-        });
+        const wsGrowth = XLSX.utils.json_to_sheet(growthData);
+        XLSX.utils.book_append_sheet(wb, wsGrowth, "Pertumbuhan");
 
         if (sampleLogsRaw && sampleLogsRaw.length > 0) {
-          rows.push("");
-          rows.push("DETAIL SAMPEL");
-          rows.push([
-            "Sampel",
-            "Hari Ke",
-            "Tinggi Tanaman (cm)",
-            "Jumlah Daun",
-            "Jumlah Cabang",
-            "pH Tanah",
-            "Kondisi Cahaya",
-            "Kondisi Tanaman",
-            "Jenis Pupuk",
-            "Luas Lahan (Ha)",
-          ].map(escapeCsv).join(","));
-
           const sampleData = sampleLogsRaw.map(log => {
             const sample = trackerSamples.find(s => String(s.id) === String(log.sample_id));
             const sampleName = sample ? (sample.name || `Sampel ${sample.sample_no}`) : "Sampel";
@@ -1265,26 +1226,20 @@ export default function ObservationHistoryPage() {
               "Luas Lahan (Ha)": log.land_area
             };
           });
-          sampleData.forEach((row) => {
-            rows.push(Object.values(row).map(escapeCsv).join(","));
-          });
+          const wsSample = XLSX.utils.json_to_sheet(sampleData);
+          XLSX.utils.book_append_sheet(wb, wsSample, "Detail Sampel");
         }
       }
 
       if (costs.length > 0) {
-        rows.push("");
-        rows.push("BIAYA");
-        rows.push(["Tanggal", "Kategori", "Keterangan", "Nominal (Rp)"].map(escapeCsv).join(","));
-
         const costsData = costs.map(cost => ({
           "Tanggal": new Date(cost.date).toLocaleDateString('id-ID'),
           "Kategori": cost.category,
           "Keterangan": cost.description,
           "Nominal (Rp)": cost.amount
         }));
-        costsData.forEach((row) => {
-          rows.push(Object.values(row).map(escapeCsv).join(","));
-        });
+        const wsCosts = XLSX.utils.json_to_sheet(costsData);
+        XLSX.utils.book_append_sheet(wb, wsCosts, "Biaya");
       }
 
       const d = new Date();
@@ -1293,15 +1248,8 @@ export default function ObservationHistoryPage() {
       const yy = String(d.getFullYear()).slice(-2);
       const dateStr = `${dd}${mm}${yy}`;
       
-      const csvContent = "\uFEFF" + rows.join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Data_${trackerTitle}_${dateStr}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
-      toast.success("CSV berhasil diunduh!");
+      XLSX.writeFile(wb, `Data_${trackerTitle}_${dateStr}.xlsx`);
+      toast.success("Excel berhasil diunduh!");
     } catch (err: any) {
       console.error("Export Excel Error:", err);
       toast.error("Gagal membuat Excel");
