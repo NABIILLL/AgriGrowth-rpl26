@@ -825,37 +825,61 @@ export default function ObservationHistoryPage() {
     }
   }
 
+  const confirmAction = (message: string, onConfirm: () => void) => {
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <p className="font-semibold text-gray-800 text-sm">{message}</p>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+          >
+            Batal
+          </button>
+          <button
+            onClick={() => {
+              toast.dismiss(t.id);
+              onConfirm();
+            }}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition"
+          >
+            Hapus
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity, id: `confirm-${Date.now()}` });
+  };
+
   // Delete a log entry
-  async function handleDeleteLog(logId: string) {
-    if (!confirm("Hapus data pengamatan ini? Tindakan ini tidak dapat dibatalkan.")) return;
-    try {
-      // Optimistic UI update: remove locally immediately
-      setLogsRaw((prev) => prev.filter((l) => String(l.id) !== String(logId)));
+  function handleDeleteLog(logId: string) {
+    confirmAction("Hapus data pengamatan ini? Tindakan ini tidak dapat dibatalkan.", async () => {
+      try {
+        // Optimistic UI update: remove locally immediately
+        setLogsRaw((prev) => prev.filter((l) => String(l.id) !== String(logId)));
 
-      // Send delete request. Include tracker_id to match RLS policies if present.
-      const query = supabase.from("growth_logs").delete().eq("id", logId);
-      if (selectedTrackerId) query.eq("tracker_id", selectedTrackerId);
+        // Send delete request. Include tracker_id to match RLS policies if present.
+        const query = supabase.from("growth_logs").delete().eq("id", logId);
+        if (selectedTrackerId) query.eq("tracker_id", selectedTrackerId);
 
-      const { data, error } = await query.select();
-      console.log('delete result', { data, error });
+        const { data, error } = await query.select();
+        console.log('delete result', { data, error });
 
-      if (error) {
-        // revert optimistic removal on failure
+        if (error) {
+          // revert optimistic removal on failure
+          await reloadLogs();
+          console.error("Error deleting log:", error);
+          toast.error(`Gagal menghapus data: ${error.message || "unknown"}`, { id: `Gagal menghapus data: ${error.message || "unknown"}` });
+          return;
+        }
+
+        // Success
+        toast.success("Data pengamatan dihapus", { id: "Data pengamatan dihapus" });
         await reloadLogs();
-        console.error("Error deleting log:", error);
-        toast.error(`Gagal menghapus data: ${error.message || "unknown"}`, { id: `Gagal menghapus data: ${error.message || "unknown"}` });
-        return;
+      } catch (err) {
+        console.error(err);
+        toast.error("Gagal menghapus data pengamatan", { id: "Gagal menghapus data pengamatan" });
       }
-
-      // Success
-      toast.success("Data pengamatan berhasil dihapus", { id: "Data pengamatan berhasil dihapus" });
-      // ensure UI consistent
-      await reloadLogs();
-    } catch (err: any) {
-      console.error("Error deleting log (unexpected):", err);
-      toast.error(`Gagal menghapus data: ${err?.message ?? "unknown"}`, { id: `Gagal menghapus data: ${err?.message ?? "unknown"}` });
-      await reloadLogs();
-    }
+    });
   }
 
   // Update a log entry
@@ -889,18 +913,17 @@ export default function ObservationHistoryPage() {
   async function reloadCosts() {
     if (!selectedTrackerId || !userId) return;
     try {
-      const { data, error } = await supabase
-        .from("production_costs")
-        .select("*")
-        .eq("tracker_id", selectedTrackerId)
-        .order("date", { ascending: false });
+      const response = await fetch(`/api/observation/costs?trackerId=${encodeURIComponent(selectedTrackerId)}`, {
+        headers: await createAuthHeaders(session),
+        credentials: "include",
+      });
+      const data = await response.json();
       
-      if (error) {
-        // If table doesn't exist yet, just ignore or log
-        console.error("Error loading costs (maybe table not created?):", error);
+      if (!response.ok) {
+        console.error("Error loading costs:", data.error);
         return;
       }
-      setCosts(data || []);
+      setCosts(data.costs || []);
     } catch (err) {
       console.error("Failed to load costs", err);
     }
@@ -927,12 +950,30 @@ export default function ObservationHistoryPage() {
 
     try {
       if (editingCost) {
-        const { error } = await supabase.from("production_costs").update(costData).eq("id", editingCost.id);
-        if (error) throw error;
+        const response = await fetch("/api/observation/costs", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(await createAuthHeaders(session) || {}),
+          },
+          credentials: "include",
+          body: JSON.stringify({ id: editingCost.id, ...costData }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
         toast.success("Biaya berhasil diperbarui", { id: "Biaya berhasil diperbarui" });
       } else {
-        const { error } = await supabase.from("production_costs").insert(costData);
-        if (error) throw error;
+        const response = await fetch("/api/observation/costs", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(await createAuthHeaders(session) || {}),
+          },
+          credentials: "include",
+          body: JSON.stringify(costData),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
         toast.success("Biaya berhasil ditambahkan", { id: "Biaya berhasil ditambahkan" });
       }
       setShowCostForm(false);
@@ -945,17 +986,24 @@ export default function ObservationHistoryPage() {
   }
 
   // Delete Cost
-  async function handleDeleteCost(id: string) {
-    if (!confirm("Hapus data biaya ini?")) return;
-    try {
-      const { error } = await supabase.from("production_costs").delete().eq("id", id);
-      if (error) throw error;
-      toast.success("Biaya dihapus", { id: "Biaya dihapus" });
-      reloadCosts();
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Gagal menghapus biaya", { id: "Gagal menghapus biaya" });
-    }
+  function handleDeleteCost(id: string) {
+    confirmAction("Hapus data biaya ini?", async () => {
+      try {
+        const response = await fetch(`/api/observation/costs?id=${encodeURIComponent(id)}&trackerId=${encodeURIComponent(selectedTrackerId!)}`, {
+          method: "DELETE",
+          headers: await createAuthHeaders(session),
+          credentials: "include",
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+        
+        toast.success("Biaya dihapus", { id: "Biaya dihapus" });
+        reloadCosts();
+      } catch (err: any) {
+        console.error(err);
+        toast.error("Gagal menghapus biaya", { id: "Gagal menghapus biaya" });
+      }
+    });
   }
 
   // Cost categories
@@ -1357,21 +1405,22 @@ export default function ObservationHistoryPage() {
                       </p>
                     </button>
                     <button
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.stopPropagation();
-                        if (!confirm(`Hapus lahan \"${tracker.title}\"? Tindakan ini akan menghapus semua data terkait.`)) return;
-                        try {
-                          const resp = await fetch(`/api/observation/history?trackerId=${encodeURIComponent(tracker.id)}`, { method: 'DELETE', credentials: 'include' });
-                          const res = await resp.json();
-                          if (!resp.ok) throw new Error(res?.error || 'Gagal menghapus lahan');
-                          setTrackers((prev) => prev.filter((t) => t.id !== tracker.id));
-                          // If deleting selected, clear selection
-                          if (String(selectedTrackerId) === String(tracker.id)) setSelectedTrackerId(null);
-                          toast.success('Lahan berhasil dihapus');
-                        } catch (err: any) {
-                          console.error('Error deleting tracker:', err);
-                          toast.error(err?.message || 'Gagal menghapus lahan');
-                        }
+                        confirmAction(`Hapus lahan "${tracker.title}"? Tindakan ini akan menghapus semua data terkait.`, async () => {
+                          try {
+                            const resp = await fetch(`/api/observation/history?trackerId=${encodeURIComponent(tracker.id)}`, { method: 'DELETE', credentials: 'include' });
+                            const res = await resp.json();
+                            if (!resp.ok) throw new Error(res?.error || 'Gagal menghapus lahan');
+                            setTrackers((prev) => prev.filter((t) => t.id !== tracker.id));
+                            // If deleting selected, clear selection
+                            if (String(selectedTrackerId) === String(tracker.id)) setSelectedTrackerId(null);
+                            toast.success('Lahan berhasil dihapus');
+                          } catch (err: any) {
+                            console.error('Error deleting tracker:', err);
+                            toast.error(err?.message || 'Gagal menghapus lahan');
+                          }
+                        });
                       }}
                       title="Hapus lahan"
                       className="absolute top-2 right-2 rounded-full bg-white border border-red-200 text-red-600 px-2 py-1 text-xs font-semibold hover:bg-red-50"
