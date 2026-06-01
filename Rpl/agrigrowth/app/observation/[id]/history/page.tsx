@@ -65,6 +65,16 @@ interface SampleInput {
   land_area: string;
 }
 
+type LandUnit = "ha" | "m2";
+
+type ForecastContext = {
+  variety: string;
+  plantingDate: string;
+  spacingCm: number | null;
+  plantPerArea: number | null;
+  landUnit: LandUnit;
+};
+
 interface SampleObservationInput {
   sampleId: string;
   dayNumber: string;
@@ -129,6 +139,12 @@ export default function ObservationHistoryPage() {
   const [creatingTracker, setCreatingTracker] = useState(false);
   const [addingSample, setAddingSample] = useState(false);
   const [newTrackerName, setNewTrackerName] = useState("");
+  const [newTrackerVariety, setNewTrackerVariety] = useState("");
+  const [newTrackerPlantingDate, setNewTrackerPlantingDate] = useState("");
+  const [newTrackerSpacing, setNewTrackerSpacing] = useState("");
+  const [newTrackerPlantPerArea, setNewTrackerPlantPerArea] = useState("");
+  const [newTrackerLandUnit, setNewTrackerLandUnit] = useState<LandUnit>("ha");
+  const [forecastByTrackerId, setForecastByTrackerId] = useState<Record<string, ForecastContext>>({});
   const [sampleCount, setSampleCount] = useState<number>(3);
   const defaultSampleInput = {
     plant_height: "",
@@ -337,6 +353,14 @@ export default function ObservationHistoryPage() {
       land_area: Number(avg(parsedSamples.map((item) => item.land_area)).toFixed(2)),
     };
 
+    const forecastContext: ForecastContext = {
+      variety: newTrackerVariety.trim(),
+      plantingDate: newTrackerPlantingDate,
+      spacingCm: newTrackerSpacing.trim() ? Number.parseFloat(newTrackerSpacing) : null,
+      plantPerArea: newTrackerPlantPerArea.trim() ? Number.parseFloat(newTrackerPlantPerArea) : null,
+      landUnit: newTrackerLandUnit,
+    };
+
     setCreatingTracker(true);
     try {
       const response = await fetch("/api/observation/history", {
@@ -365,6 +389,11 @@ export default function ObservationHistoryPage() {
       const sampleLogRows = result.growth_sample_logs || [];
       const growthLogRow = result.growth_log;
 
+      setForecastByTrackerId((prev) => ({
+        ...prev,
+        [trackerData.id]: forecastContext,
+      }));
+
       setLogsRaw(growthLogRow ? [growthLogRow] : []);
       setTrackerSamples(trackerSampleRows);
       setSampleLogsRaw(sampleLogRows);
@@ -389,6 +418,11 @@ export default function ObservationHistoryPage() {
       setSelectedTrackerId(trackerData.id);
       setShowCreateTrackerModal(false);
       setNewTrackerName("");
+      setNewTrackerVariety("");
+      setNewTrackerPlantingDate("");
+      setNewTrackerSpacing("");
+      setNewTrackerPlantPerArea("");
+      setNewTrackerLandUnit("ha");
       setSampleCount(3);
       setSampleInputs(Array.from({ length: 3 }, () => ({ ...defaultSampleInput })));
       setExpandedSample(0);
@@ -490,8 +524,26 @@ export default function ObservationHistoryPage() {
           };
           setStats(newStats);
         } else {
-          setChartData([]);
-          setStats({ startHeight: 0, endHeight: 0, startLeaf: 0, endLeaf: 0, daysSpan: 0, avgHeightGrowth: 0, avgLeafGrowth: 0 });
+          const fallbackData = buildFallbackChartData(result.growth_sample_logs || []);
+          setChartData(fallbackData);
+
+          if (fallbackData.length > 0) {
+            const first = fallbackData[0];
+            const last = fallbackData[fallbackData.length - 1];
+            const daysSpan = Math.max(1, last.dayNumber - first.dayNumber || 1);
+
+            setStats({
+              startHeight: first.height,
+              endHeight: last.height,
+              startLeaf: first.leaf,
+              endLeaf: last.leaf,
+              daysSpan,
+              avgHeightGrowth: (last.height - first.height) / daysSpan,
+              avgLeafGrowth: (last.leaf - first.leaf) / daysSpan,
+            });
+          } else {
+            setStats({ startHeight: 0, endHeight: 0, startLeaf: 0, endLeaf: 0, daysSpan: 0, avgHeightGrowth: 0, avgLeafGrowth: 0 });
+          }
         }
       } catch (error) {
         console.error("Error fetching chart data:", error);
@@ -551,6 +603,30 @@ export default function ObservationHistoryPage() {
       height: log.plant_height || 0,
       leaf: log.leaf_count || 0,
     }));
+
+  const buildFallbackChartData = (sampleLogs: typeof sampleLogsRaw) => {
+    if (!sampleLogs.length) return [];
+
+    const grouped = new Map<number, { heightTotal: number; leafTotal: number; count: number }>();
+
+    sampleLogs.forEach((log) => {
+      const dayNumber = Number(log.day_number || 1);
+      const bucket = grouped.get(dayNumber) || { heightTotal: 0, leafTotal: 0, count: 0 };
+      bucket.heightTotal += Number(log.plant_height || 0);
+      bucket.leafTotal += Number(log.leaf_count || 0);
+      bucket.count += 1;
+      grouped.set(dayNumber, bucket);
+    });
+
+    return Array.from(grouped.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([dayNumber, bucket]) => ({
+        day: `Hari ${dayNumber}`,
+        dayNumber,
+        height: Number((bucket.heightTotal / bucket.count).toFixed(2)),
+        leaf: Math.round(bucket.leafTotal / bucket.count),
+      }));
+  };
 
   const updateSampleObservationInput = (field: keyof SampleObservationInput, value: string) => {
     setSampleObservationInput((prev) => ({
@@ -612,13 +688,29 @@ export default function ObservationHistoryPage() {
         avgLeafGrowth: (last.leaf - first.leaf) / daysSpan,
       });
     } else {
-      setChartData([]);
-      setStats({ startHeight: 0, endHeight: 0, startLeaf: 0, endLeaf: 0, daysSpan: 0, avgHeightGrowth: 0, avgLeafGrowth: 0 });
+      const fallbackData = buildFallbackChartData(result.growth_sample_logs || []);
+      setChartData(fallbackData);
+
+      if (fallbackData.length > 0) {
+        const first = fallbackData[0];
+        const last = fallbackData[fallbackData.length - 1];
+        const daysSpan = Math.max(1, last.dayNumber - first.dayNumber || 1);
+
+        setStats({
+          startHeight: first.height,
+          endHeight: last.height,
+          startLeaf: first.leaf,
+          endLeaf: last.leaf,
+          daysSpan,
+          avgHeightGrowth: (last.height - first.height) / daysSpan,
+          avgLeafGrowth: (last.leaf - first.leaf) / daysSpan,
+        });
+      } else {
+        setStats({ startHeight: 0, endHeight: 0, startLeaf: 0, endLeaf: 0, daysSpan: 0, avgHeightGrowth: 0, avgLeafGrowth: 0 });
+      }
     }
 
     const nextSamples = result.tracker_samples || [];
-    setTrackerSamples(nextSamples);
-    setSampleLogsRaw(result.growth_sample_logs || []);
     setDiseaseAnalysisLogs(result.disease_analysis_logs || []);
 
     const preferredSampleExists = preferredSampleId && nextSamples.some((sample: any) => String(sample.id) === String(preferredSampleId));
@@ -1023,19 +1115,95 @@ export default function ObservationHistoryPage() {
   }, {} as Record<string, number>);
 
   // Predictions component (simple heuristic)
-  function PredictionsSection({ plantType, avgHeightGrowth, currentHeight, latestLog }: any) {
+  function PredictionsSection({ plantType, avgHeightGrowth, currentHeight, latestLog, forecastContext }: any) {
     const defaults: any = {
-      padi: { maturityHeight: 100, ratesPerHa: { N: 150, P: 50, K: 50 } },
-      jagung: { maturityHeight: 250, ratesPerHa: { N: 200, P: 60, K: 80 } },
-      bawang: { maturityHeight: 50, ratesPerHa: { N: 120, P: 40, K: 60 } },
+      padi: { maturityDays: 110, maturityHeight: 100, baseYieldTonPerHa: 6.2, ratesPerHa: { NPK: 250, Urea: 180, Kompos: 900 } },
+      jagung: { maturityDays: 100, maturityHeight: 250, baseYieldTonPerHa: 8.5, ratesPerHa: { NPK: 300, Urea: 220, Kompos: 750 } },
+      bawang: { maturityDays: 65, maturityHeight: 50, baseYieldTonPerHa: 18.0, ratesPerHa: { NPK: 350, Urea: 140, Kompos: 650 } },
     };
 
     const key = plantType === "jagung" ? "jagung" : plantType === "bawang" ? "bawang" : "padi";
     const cfg = defaults[key] || defaults.padi;
 
+    const plantingDate = forecastContext?.plantingDate ? new Date(forecastContext.plantingDate) : null;
+    const hasValidPlantingDate = plantingDate instanceof Date && !Number.isNaN(plantingDate.getTime());
+    const landArea = Number(latestLog?.land_area || 1);
+    const landAreaHa = forecastContext?.landUnit === "m2" ? landArea / 10000 : landArea;
+
+    const lightScoreMap: Record<string, number> = {
+      "sangat kurang": 0.7,
+      kurang: 0.85,
+      cukup: 1,
+      baik: 1.05,
+      "sangat baik": 1.1,
+    };
+    const conditionScoreMap: Record<string, number> = {
+      sehat: 1.08,
+      "cukup sehat": 0.97,
+      "kurang sehat": 0.86,
+      layu: 0.72,
+    };
+
+    const lightScore = lightScoreMap[String(latestLog?.light_condition || "").trim().toLowerCase()] || 1;
+    const conditionScore = conditionScoreMap[String(latestLog?.plant_condition || "").trim().toLowerCase()] || 1;
+    const ph = Number(latestLog?.soil_ph || 7);
+    const phScore =
+      key === "padi"
+        ? ph >= 5.5 && ph <= 6.5
+          ? 1.05
+          : 0.92
+        : key === "jagung"
+          ? ph >= 5.8 && ph <= 7.0
+            ? 1.05
+            : 0.9
+          : ph >= 6 && ph <= 7
+            ? 1.05
+            : 0.9;
+
+    const spacingScore = forecastContext?.spacingCm
+      ? key === "padi"
+        ? forecastContext.spacingCm >= 20 && forecastContext.spacingCm <= 30
+          ? 1.04
+          : 0.95
+        : key === "jagung"
+          ? forecastContext.spacingCm >= 25 && forecastContext.spacingCm <= 40
+            ? 1.04
+            : 0.95
+          : forecastContext.spacingCm >= 10 && forecastContext.spacingCm <= 15
+            ? 1.04
+            : 0.95
+      : 1;
+
+    const densityScore = forecastContext?.plantPerArea
+      ? key === "padi"
+        ? forecastContext.plantPerArea >= 20 && forecastContext.plantPerArea <= 35
+          ? 1.03
+          : 0.94
+        : key === "jagung"
+          ? forecastContext.plantPerArea >= 4 && forecastContext.plantPerArea <= 6
+            ? 1.03
+            : 0.94
+          : forecastContext.plantPerArea >= 25 && forecastContext.plantPerArea <= 35
+            ? 1.03
+            : 0.94
+      : 1;
+
+    const qualityScore = Math.max(0.65, Math.min(1.25, lightScore * conditionScore * phScore * spacingScore * densityScore));
+    const estimatedYieldTon = Number((cfg.baseYieldTonPerHa * landAreaHa * qualityScore).toFixed(2));
+    const estimatedYieldKg = Math.round(estimatedYieldTon * 1000);
+    const fertilizerRecommendations = Object.entries(cfg.ratesPerHa).map(([nutrient, rate]) => ({
+      nutrient,
+      totalKg: Number((Number(rate) * landAreaHa).toFixed(1)),
+    }));
+
     let daysToMaturity: number | null = null;
     let predictedDate: string | null = null;
-    if (avgHeightGrowth > 0) {
+    if (hasValidPlantingDate) {
+      const d = new Date(plantingDate);
+      d.setDate(d.getDate() + cfg.maturityDays);
+      predictedDate = d.toLocaleDateString("id-ID");
+      daysToMaturity = Math.max(0, Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+    } else if (avgHeightGrowth > 0) {
       daysToMaturity = Math.ceil((cfg.maturityHeight - (currentHeight || 0)) / avgHeightGrowth);
       if (daysToMaturity < 0) daysToMaturity = 0;
       const d = new Date();
@@ -1043,27 +1211,41 @@ export default function ObservationHistoryPage() {
       predictedDate = d.toLocaleDateString('id-ID');
     }
 
-    // land area from latestLog if available (stored in hectares in the form)
-    const landArea = latestLog?.land_area || 1;
-    const fertilizer = Object.fromEntries(Object.entries(cfg.ratesPerHa).map(([k, v]) => [k, ((v as number) * landArea).toFixed(1)]));
+    const hasForecastContext = Boolean(forecastContext?.variety || forecastContext?.plantingDate || forecastContext?.spacingCm || forecastContext?.plantPerArea);
 
     return (
       <div>
-        <p className="text-sm text-[#365a1a]/80 mb-2">Estimasi sederhana berdasarkan rata-rata pertumbuhan tinggi tanaman.</p>
+        <p className="text-sm text-[#365a1a]/80 mb-3">Estimasi ini memakai data pertumbuhan, tanggal tanam, varietas, jarak tanam, dan kepadatan tanaman bila diisi.</p>
+
+        {hasForecastContext && (
+          <div className="mb-4 rounded-xl bg-[#f0f4eb] px-4 py-3 text-sm text-[#365a1a]">
+            <p className="font-semibold">Konteks lahan</p>
+            <p>Varietas: {forecastContext?.variety || "-"}</p>
+            <p>Tanggal tanam: {forecastContext?.plantingDate || "-"}</p>
+            <p>Jarak tanam: {forecastContext?.spacingCm ? `${forecastContext.spacingCm} cm` : "-"}</p>
+            <p>Kepadatan tanam: {forecastContext?.plantPerArea ? `${forecastContext.plantPerArea} tanaman/${forecastContext.landUnit}` : "-"}</p>
+          </div>
+        )}
+
         {daysToMaturity === null || !predictedDate ? (
           <p className="text-sm text-red-600">Belum cukup data untuk memprediksi panen. Tambah minimal dua titik pengamatan dengan nilai tinggi.</p>
         ) : (
           <div className="space-y-2">
             <p className="font-semibold">Perkiraan hari hingga panen: {daysToMaturity} hari</p>
             <p className="text-sm text-gray-700">Perkiraan tanggal panen: {predictedDate} (estimasi)</p>
+            <div className="mt-3 rounded-xl border border-[#365a1a]/15 bg-[#fafcf7] p-4">
+              <h4 className="font-semibold text-[#365a1a]">Estimasi hasil panen</h4>
+              <p className="text-sm text-[#365a1a]/80">{estimatedYieldTon} ton atau sekitar {estimatedYieldKg.toLocaleString("id-ID")} kg dari {landAreaHa.toFixed(2)} ha.</p>
+              <p className="mt-2 text-xs text-gray-500">Skor kualitas lahan: {(qualityScore * 100).toFixed(0)}% dari nilai dasar.</p>
+            </div>
             <div className="mt-3">
-              <h4 className="font-semibold">Rekomendasi pupuk untuk luas lahan {landArea} ha</h4>
+              <h4 className="font-semibold">Rekomendasi dosis pupuk untuk {landAreaHa.toFixed(2)} ha</h4>
               <ul className="text-sm text-[#365a1a]/80">
-                {Object.entries(fertilizer).map(([nutrient, qty]) => (
-                  <li key={nutrient}>• {nutrient}: {qty} kg</li>
+                {fertilizerRecommendations.map((item) => (
+                  <li key={item.nutrient}>• {item.nutrient}: {item.totalKg} kg</li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-gray-500">Catatan: Angka di atas adalah estimasi dasar. Sesuaikan dengan kondisi lapang dan rekomendasi teknis setempat.</p>
+              <p className="mt-2 text-xs text-gray-500">Catatan: ini estimasi awal. Dosis akhir tetap perlu disesuaikan dengan uji tanah dan anjuran setempat.</p>
             </div>
           </div>
         )}
@@ -1611,6 +1793,7 @@ export default function ObservationHistoryPage() {
                     avgHeightGrowth={stats.avgHeightGrowth}
                     currentHeight={stats.endHeight}
                     latestLog={logsRaw.length ? logsRaw[logsRaw.length - 1] : null}
+                    forecastContext={selectedTrackerId ? forecastByTrackerId[selectedTrackerId] : null}
                   />
                 </motion.div>
 
@@ -1866,6 +2049,69 @@ export default function ObservationHistoryPage() {
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+                <div>
+                  <label className="block text-sm font-semibold text-[#365a1a] mb-1">Varietas Tanaman</label>
+                  <input
+                    type="text"
+                    value={newTrackerVariety}
+                    onChange={(e) => setNewTrackerVariety(e.target.value)}
+                    placeholder="Contoh: Inpari 32"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-[#365a1a] focus:ring-1 focus:ring-[#365a1a]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-[#365a1a] mb-1">Tanggal Tanam</label>
+                  <input
+                    type="date"
+                    value={newTrackerPlantingDate}
+                    onChange={(e) => setNewTrackerPlantingDate(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-[#365a1a] focus:ring-1 focus:ring-[#365a1a]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-[#365a1a] mb-1">Jarak Tanam (cm)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={newTrackerSpacing}
+                    onChange={(e) => setNewTrackerSpacing(e.target.value)}
+                    placeholder="Contoh: 25"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-[#365a1a] focus:ring-1 focus:ring-[#365a1a]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-[#365a1a] mb-1">Tanaman per Satuan Luas</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={newTrackerPlantPerArea}
+                    onChange={(e) => setNewTrackerPlantPerArea(e.target.value)}
+                    placeholder="Contoh: 25"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-[#365a1a] focus:ring-1 focus:ring-[#365a1a]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                <div>
+                  <label className="block text-sm font-semibold text-[#365a1a] mb-1">Satuan Luas</label>
+                  <select
+                    value={newTrackerLandUnit}
+                    onChange={(e) => setNewTrackerLandUnit(e.target.value as LandUnit)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-[#365a1a] focus:ring-1 focus:ring-[#365a1a] bg-white"
+                  >
+                    <option value="ha">Hektare (ha)</option>
+                    <option value="m2">Meter Persegi (m²)</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2 rounded-xl border border-dashed border-[#365a1a]/25 bg-[#fafcf7] px-4 py-3 text-sm text-[#365a1a]/80">
+                  Data tambahan ini dipakai untuk memperkirakan waktu panen, estimasi hasil panen, dan dosis pupuk. Jika kosong, prediksi tetap berjalan tetapi akurasinya lebih rendah.
                 </div>
               </div>
 

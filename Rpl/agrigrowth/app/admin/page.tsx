@@ -31,6 +31,21 @@ type GrowthLog = {
 type GrowthSampleLog = { id: string; tracker_id: string; sample_id?: string | null; day_number?: number | null; created_at?: string | null };
 type TrackerSample = { id: string; tracker_id: string; sample_no: number; name: string; created_at?: string | null };
 
+type TrackerPrediction = {
+  trackerId: string;
+  trackerTitle: string;
+  plantType: string;
+  currentHeight: number;
+  avgDailyGrowth: number;
+  daysToHarvest: number | null;
+  harvestDate: string | null;
+  estimatedYieldTon: number;
+  estimatedYieldKg: number;
+  fertilizerNeedKg: number;
+  confidenceLabel: string;
+  dataPoints: number;
+};
+
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
   return value.split("T")[0];
@@ -38,6 +53,24 @@ const formatDate = (value?: string | null) => {
 
 const getShortDay = (date: Date) =>
   date.toLocaleDateString("en-US", { weekday: "short" });
+
+const cropDefaults: Record<string, { maturityHeight: number; maturityDays: number; baseYieldTonPerHa: number; fertilizerKgPerHa: number }> = {
+  padi: { maturityHeight: 100, maturityDays: 110, baseYieldTonPerHa: 6.2, fertilizerKgPerHa: 250 },
+  jagung: { maturityHeight: 250, maturityDays: 100, baseYieldTonPerHa: 8.5, fertilizerKgPerHa: 300 },
+  bawang: { maturityHeight: 50, maturityDays: 65, baseYieldTonPerHa: 18.0, fertilizerKgPerHa: 350 },
+};
+
+const cropLabel = (plantType?: string | null) => {
+  if (plantType === "jagung") return "Jagung";
+  if (plantType === "bawang") return "Bawang Merah";
+  return "Padi";
+};
+
+const cropKey = (plantType?: string | null) => {
+  if (plantType === "jagung") return "jagung";
+  if (plantType === "bawang") return "bawang";
+  return "padi";
+};
 
 export default function AdminDashboardPage() {
   const [users, setUsers] = useState<SupabaseUser[]>([]);
@@ -77,6 +110,76 @@ export default function AdminDashboardPage() {
     });
     return counts;
   }, [roles]);
+
+  const trackerPredictions = useMemo<TrackerPrediction[]>(() => {
+    const byTracker = new Map<string, GrowthLog[]>();
+    growthLogs.forEach((log) => {
+      const list = byTracker.get(log.tracker_id) || [];
+      list.push(log);
+      byTracker.set(log.tracker_id, list);
+    });
+
+    return trackers
+      .map((tracker) => {
+        const logs = (byTracker.get(tracker.id) || [])
+          .filter((item) => typeof item.day_number === "number" && typeof item.plant_height === "number")
+          .sort((a, b) => (a.day_number || 0) - (b.day_number || 0));
+
+        const key = cropKey(tracker.plant_type);
+        const cfg = cropDefaults[key];
+        const latest = logs[logs.length - 1];
+        const first = logs[0];
+        const daysSpan = logs.length > 1 ? Math.max(1, (latest?.day_number || 1) - (first?.day_number || 1)) : 1;
+        const avgDailyGrowth = logs.length > 1 && latest && first ? Math.max(0, ((latest.plant_height || 0) - (first.plant_height || 0)) / daysSpan) : 0;
+        const currentHeight = latest?.plant_height || 0;
+        const predictedDaysFromGrowth = avgDailyGrowth > 0 ? Math.max(0, Math.ceil((cfg.maturityHeight - currentHeight) / avgDailyGrowth)) : null;
+        const daysToHarvest = predictedDaysFromGrowth ?? cfg.maturityDays;
+        const harvestDate = new Date();
+        harvestDate.setDate(harvestDate.getDate() + (daysToHarvest || cfg.maturityDays));
+
+        const landArea = latest?.land_area || 1;
+        const estimatedYieldTon = Number((cfg.baseYieldTonPerHa * landArea).toFixed(2));
+        const estimatedYieldKg = Math.round(estimatedYieldTon * 1000);
+        const fertilizerNeedKg = Number((cfg.fertilizerKgPerHa * landArea).toFixed(1));
+
+        const confidenceLabel =
+          logs.length >= 4
+            ? "Tinggi"
+            : logs.length >= 2
+              ? "Sedang"
+              : "Rendah";
+
+        return {
+          trackerId: tracker.id,
+          trackerTitle: tracker.title,
+          plantType: cropLabel(tracker.plant_type),
+          currentHeight,
+          avgDailyGrowth: Number(avgDailyGrowth.toFixed(2)),
+          daysToHarvest,
+          harvestDate: harvestDate.toLocaleDateString("id-ID"),
+          estimatedYieldTon,
+          estimatedYieldKg,
+          fertilizerNeedKg,
+          confidenceLabel,
+          dataPoints: logs.length,
+        };
+      })
+      .sort((a, b) => a.daysToHarvest === null ? 1 : b.daysToHarvest === null ? -1 : a.daysToHarvest - b.daysToHarvest);
+  }, [growthLogs, trackers]);
+
+  const predictionStats = useMemo(() => {
+    const ready = trackerPredictions.filter((item) => item.dataPoints >= 2);
+    const urgent = ready.filter((item) => item.daysToHarvest !== null && item.daysToHarvest <= 14);
+    const averageDays = ready.length
+      ? Math.round(ready.reduce((sum, item) => sum + (item.daysToHarvest || 0), 0) / ready.length)
+      : 0;
+
+    return {
+      readyCount: ready.length,
+      urgentCount: urgent.length,
+      averageDays,
+    };
+  }, [trackerPredictions]);
 
   useEffect(() => {
     let isMounted = true;
@@ -260,6 +363,60 @@ export default function AdminDashboardPage() {
           <div className="kpi-num">{growthLogs.length}</div>
           <div className="kpi-label">Growth Logs</div>
         </div>
+      </div>
+
+      <div className="grid-3-2" style={{ marginBottom: 18 }}>
+        <div className="panel" style={{ background: "linear-gradient(135deg, rgba(54,90,26,0.08), rgba(97,174,37,0.04))", border: "1px solid rgba(54,90,26,0.14)" }}>
+          <div className="panel-header">
+            <div className="panel-title"><i className="ti ti-sparkles"></i> Prediksi Panen Lahan</div>
+            <div className="panel-actions">
+              <span className="mini-btn active" style={{ cursor: "default" }}>Heuristik</span>
+            </div>
+          </div>
+
+          <div style={{ padding: 12, display: "grid", gap: 12 }}>
+            <div className="stat-inline" style={{ marginBottom: 0 }}>
+              <div className="stat-cell">
+                <div className="stat-cell-num">{predictionStats.readyCount}</div>
+                <div className="stat-cell-lbl">Siap diprediksi</div>
+              </div>
+              <div className="stat-cell">
+                <div className="stat-cell-num">{predictionStats.urgentCount}</div>
+                <div className="stat-cell-lbl">Panen &lt;= 14 hari</div>
+              </div>
+              <div className="stat-cell">
+                <div className="stat-cell-num" style={{ color: "var(--teal)" }}>{predictionStats.averageDays}</div>
+                <div className="stat-cell-lbl">Rata-rata hari</div>
+              </div>
+            </div>
+
+            {trackerPredictions.length === 0 ? (
+              <div style={{ padding: "12px 0", color: "var(--text4)" }}>Belum ada tracker untuk dihitung prediksi panennya.</div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {trackerPredictions.slice(0, 4).map((item) => (
+                  <div key={item.trackerId} style={{ border: "1px solid rgba(54,90,26,0.12)", borderRadius: 16, padding: 12, background: "#fff" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, color: "var(--text2)" }}>{item.trackerTitle}</div>
+                        <div style={{ fontSize: 12, color: "var(--text4)" }}>{item.plantType} · {item.dataPoints} data point</div>
+                      </div>
+                      <span className="mini-btn" style={{ cursor: "default" }}>{item.confidenceLabel}</span>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginTop: 10, fontSize: 13 }}>
+                      <div><span style={{ color: "var(--text4)" }}>Panen:</span> <b>{item.daysToHarvest ?? "-"} hari</b></div>
+                      <div><span style={{ color: "var(--text4)" }}>Tanggal:</span> <b>{item.harvestDate || "-"}</b></div>
+                      <div><span style={{ color: "var(--text4)" }}>Hasil:</span> <b>{item.estimatedYieldTon} ton</b></div>
+                      <div><span style={{ color: "var(--text4)" }}>Pupuk:</span> <b>{item.fertilizerNeedKg} kg</b></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
 
       <div className="grid-3-2">
