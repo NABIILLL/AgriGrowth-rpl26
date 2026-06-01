@@ -318,20 +318,21 @@ export default function AnalisisPenyakitPage() {
       >
         <div className="max-w-2xl mx-auto">
 
-          <motion.div variants={fadeUpVariant} className="mb-8">
+          <motion.div variants={fadeUpVariant} className="mb-8 text-center">
             <h1 className="text-2xl font-bold text-gray-800">🔬 Analisis Penyakit Tanaman</h1>
             <p className="text-gray-500 mt-1 text-sm">Upload foto tanamanmu dan AI akan mendeteksi penyakit secara otomatis.</p>
           </motion.div>
 
-          {/* Step Indicator */}
-          <motion.div variants={fadeUpVariant} className="flex items-center gap-2 mb-8">
+          <motion.div variants={fadeUpVariant} className="flex items-center justify-center w-full mx-auto gap-2 sm:gap-4 mb-8">
             {[{ num: 1, label: "Pilih Tanaman" }, { num: 2, label: "Upload Foto" }, { num: 3, label: "Hasil Analisis" }].map((s, i) => (
-              <div key={s.num} className="flex items-center gap-2 flex-1">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${step >= s.num ? "bg-[#365a1a] text-white" : "bg-gray-200 text-gray-400"}`}>
-                  {s.num}
+              <div key={s.num} className="flex items-center gap-2 sm:gap-4">
+                <div className="flex items-center gap-2">
+                  <div className={`w-7 h-7 rounded-full flex shrink-0 items-center justify-center text-xs font-bold transition-all ${step >= s.num ? "bg-[#365a1a] text-white" : "bg-gray-200 text-gray-400"}`}>
+                    {s.num}
+                  </div>
+                  <span className={`text-xs hidden sm:block whitespace-nowrap ${step >= s.num ? "text-[#365a1a] font-medium" : "text-gray-400"}`}>{s.label}</span>
                 </div>
-                <span className={`text-xs hidden sm:block ${step >= s.num ? "text-[#365a1a] font-medium" : "text-gray-400"}`}>{s.label}</span>
-                {i < 2 && <div className={`flex-1 h-0.5 ${step > s.num ? "bg-[#365a1a]" : "bg-gray-200"}`} />}
+                {i < 2 && <div className={`w-6 sm:w-16 h-0.5 ${step > s.num ? "bg-[#365a1a]" : "bg-gray-200"}`} />}
               </div>
             ))}
           </motion.div>

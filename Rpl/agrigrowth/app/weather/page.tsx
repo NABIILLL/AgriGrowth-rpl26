@@ -16,10 +16,28 @@ import {
 } from "lucide-react";
 
 import { useWeather } from "@/hooks/useWeather";
-import { useUser } from "@/hooks/useUser";
-import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { getWeatherDescription } from "@/lib/weather";
-import { UserButton } from "@clerk/nextjs";
+import GlobalHeader from "@/components/GlobalHeader";
+import { motion, Variants } from "framer-motion";
+
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15
+    }
+  }
+};
+
+const fadeUpVariant: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  show: { 
+    opacity: 1, 
+    y: 0,
+    transition: { type: "spring", stiffness: 70, damping: 15 } as const
+  }
+};
 
 const imgRainHero = "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?q=80&w=2000&auto=format&fit=crop";
 const imgBrandLogo = "/logo%202.png";
@@ -81,8 +99,6 @@ function getWeatherAccent(code: number) {
 }
 
 export default function WeatherInfo() {
-  const { user, isLoading } = useUser();
-  const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
   const [latitude, setLatitude] = useState(DEFAULT_LAT);
   const [longitude, setLongitude] = useState(DEFAULT_LON);
   const [locationName, setLocationName] = useState(DEFAULT_LOCATION);
@@ -213,46 +229,15 @@ export default function WeatherInfo() {
 
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
-      <header className="relative z-50 mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-6 sm:px-10 lg:px-14">
-        <Link href="/" className="flex items-center gap-2.5 transition hover:opacity-80">
-          <img alt="Agrigrowth logo" className="h-10 w-[170px] object-contain sm:h-11 sm:w-[190px]" src={imgBrandLogo} />
-          <b className="text-[20px] leading-none sm:text-[21px]"></b>
-        </Link>
+      <GlobalHeader variant="light" />
 
-        <nav className="hidden items-center gap-10 text-[21px] font-bold lg:flex">
-          <Link href="/" className={navLinkClass}>
-            Home
-          </Link>
-          <Link href="/about" className={navLinkClass}>
-            About
-          </Link>
-          <Link href="/growth-tracker" className={navLinkClass}>
-            Growth Tracker
-          </Link>
-          <Link href="/weather" className={navLinkClass}>
-            Weather
-          </Link>
-          <Link href="/history" className={navLinkClass}>
-            History
-          </Link>
-          <Link href="/analisis-penyakit" className="transition hover:opacity-80">
-            Analisis Penyakit
-          </Link>
-        </nav>
-
-        {!isLoading ? (
-          user ? (
-            <div className="flex items-center gap-4"><UserButton showName={true} appearance={{ elements: { userButtonAvatarBox: "w-8 h-8 shadow-md" } }} /></div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <Link href="/auth" className="text-sm font-semibold text-[#365a1a]">Login / Sign Up</Link>
-            </div>
-          )
-        ) : null}
-      </header>
-
-      <section className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-5 pb-12 pt-6 sm:px-10 lg:px-14 lg:pt-8">
-        <article className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-[383px_1fr] lg:items-stretch">
+      <motion.section 
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-5 pb-12 pt-6 sm:px-10 lg:px-14 lg:pt-8"
+      >
+        <motion.article variants={fadeUpVariant} className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-[383px_1fr] lg:items-stretch">
           <div className="rounded-[50px] border-[3px] border-[rgba(54,90,26,0.75)] bg-white px-6 py-7 shadow-[0_20px_55px_rgba(54,90,26,0.12)] sm:px-8 sm:py-8">
             <div className="flex h-full flex-col items-center justify-center text-center">
               <WeatherGlyph code={currentCode} className="h-14 w-14 text-[#365a1a] sm:h-16 sm:w-16" />
@@ -312,9 +297,9 @@ export default function WeatherInfo() {
               </>
             )}
           </div>
-        </article>
+        </motion.article>
 
-        <form onSubmit={handleSearchLocation} className="grid gap-3 grid-cols-1 sm:grid-cols-[1fr_auto] lg:grid-cols-[1fr_auto_auto]">
+        <motion.form variants={fadeUpVariant} onSubmit={handleSearchLocation} className="grid gap-3 grid-cols-1 sm:grid-cols-[1fr_auto] lg:grid-cols-[1fr_auto_auto]">
           <div className="flex items-center gap-3 rounded-full border-2 border-[rgba(54,90,26,0.25)] bg-white px-5 py-3 shadow-sm">
             <Search className="h-5 w-5 shrink-0 text-[#365a1a]/70" strokeWidth={2} />
             <input
@@ -342,22 +327,22 @@ export default function WeatherInfo() {
             <LocateFixed className="h-4 w-4" strokeWidth={2.2} />
             Lokasi Saya
           </button>
-        </form>
+        </motion.form>
 
         {searchError ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <motion.div variants={fadeUpVariant} className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {searchError}
-          </div>
+          </motion.div>
         ) : null}
 
-        <div className="rounded-[50px] bg-[#365a1a] px-6 py-5 text-center text-[16px] font-semibold text-[#d7e4cd] shadow-[0_16px_40px_rgba(54,90,26,0.16)] sm:text-[18px]">
+        <motion.div variants={fadeUpVariant} className="rounded-[50px] bg-[#365a1a] px-6 py-5 text-center text-[16px] font-semibold text-[#d7e4cd] shadow-[0_16px_40px_rgba(54,90,26,0.16)] sm:text-[18px]">
           <div className="flex items-center justify-center gap-2">
             <MapPin className="h-5 w-5 shrink-0" strokeWidth={2.1} />
             <span className="max-w-full truncate">{locationName}</span>
           </div>
-        </div>
+        </motion.div>
 
-        <section className="rounded-[50px] border-[3px] border-[rgba(54,90,26,0.75)] bg-white p-5 shadow-[0_20px_55px_rgba(54,90,26,0.12)] sm:p-7">
+        <motion.section variants={fadeUpVariant} className="rounded-[50px] border-[3px] border-[rgba(54,90,26,0.75)] bg-white p-5 shadow-[0_20px_55px_rgba(54,90,26,0.12)] sm:p-7">
           <div className="flex flex-col gap-3 border-b border-[#dfe8d2] pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-[16px] font-bold text-[#365a1a]/80">{weatherSummary}</p>
@@ -408,9 +393,9 @@ export default function WeatherInfo() {
               Data per jam belum tersedia untuk lokasi ini.
             </div>
           )}
-        </section>
+        </motion.section>
 
-        <section className="grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <motion.section variants={fadeUpVariant} className="grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           <div className="rounded-[28px] border-2 border-[#365a1a] bg-white p-4 sm:p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <div className="flex items-center gap-2 sm:gap-3 text-[#365a1a]/70">
               <Droplets className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -445,10 +430,10 @@ export default function WeatherInfo() {
             <div className="mt-2 sm:mt-3 text-2xl sm:text-[38px] font-bold leading-none text-[#365a1a]">{current ? current.visibility : "--"}</div>
             <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-[#365a1a]/70">km</p>
           </div>
-        </section>
+        </motion.section>
 
         {!loading && forecast.length > 0 ? (
-          <section className="rounded-[40px] bg-white p-5 shadow-[0_20px_55px_rgba(54,90,26,0.12)] sm:p-7">
+          <motion.section variants={fadeUpVariant} className="rounded-[40px] bg-white p-5 shadow-[0_20px_55px_rgba(54,90,26,0.12)] sm:p-7">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-[28px] font-bold sm:text-[32px]">Prakiraan 7 Hari</h2>
               <button
@@ -475,9 +460,9 @@ export default function WeatherInfo() {
                 </div>
               ))}
             </div>
-          </section>
+          </motion.section>
         ) : null}
-      </section>
+      </motion.section>
 
       <style jsx global>{`
         @keyframes weather-float {
