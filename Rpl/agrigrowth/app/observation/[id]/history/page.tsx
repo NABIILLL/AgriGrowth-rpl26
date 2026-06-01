@@ -341,7 +341,11 @@ export default function ObservationHistoryPage() {
     try {
       const response = await fetch("/api/observation/history", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(await createAuthHeaders(session) || {}),
+        },
+        credentials: "include",
         body: JSON.stringify({
           title: newTrackerName.trim(),
           plant_type: id,
