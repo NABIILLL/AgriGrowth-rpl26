@@ -9,6 +9,12 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 import { Trash2 } from "lucide-react";
 import GlobalHeader from "@/components/GlobalHeader";
+import { useSession } from "@clerk/nextjs";
+
+async function createAuthHeaders(session: ReturnType<typeof useSession>["session"]) {
+  const token = await session?.getToken().catch(() => null);
+  return token ? { Authorization: `Bearer ${token}` } : undefined;
+}
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -43,6 +49,7 @@ export default function History() {
   const displayName = !isLoading && user ? user.name : "Guest";
   const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
   const userId = user?.id;
+  const { session } = useSession();
 
   useEffect(() => {
     if (isLoading || !userId) {
@@ -52,14 +59,14 @@ export default function History() {
 
     const fetchTrackers = async () => {
       try {
-        const { data, error } = await supabase
-          .from("trackers")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-        setTrackers(data || []);
+        const response = await fetch("/api/observation/history", {
+          headers: await createAuthHeaders(session),
+          credentials: "include",
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result?.error || "Gagal memuat tracker");
+        
+        setTrackers(result.trackers || []);
       } catch (error) {
         console.error("Error fetching trackers:", error);
       } finally {
@@ -85,29 +92,53 @@ export default function History() {
     return plantImages[plantType] || imgRice2;
   };
 
-  const handleDeleteTracker = async (trackerId: string) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus tracker ini? Data yang terhubung juga akan ikut terhapus.")) {
-      return;
-    }
+  const confirmAction = (message: string, onConfirm: () => void) => {
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <p className="font-semibold text-gray-800 text-sm">{message}</p>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+          >
+            Batal
+          </button>
+          <button
+            onClick={() => {
+              toast.dismiss(t.id);
+              onConfirm();
+            }}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition"
+          >
+            Hapus
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity, id: `confirm-${Date.now()}` });
+  };
 
-    setDeleting(trackerId);
-    try {
-      const { error } = await supabase
-        .from("trackers")
-        .delete()
-        .eq("id", trackerId);
+  const handleDeleteTracker = (trackerId: string) => {
+    confirmAction("Apakah Anda yakin ingin menghapus tracker ini? Data yang terhubung juga akan ikut terhapus.", async () => {
+      setDeleting(trackerId);
+      try {
+        const response = await fetch(`/api/observation/history?trackerId=${encodeURIComponent(trackerId)}`, {
+          method: "DELETE",
+          headers: await createAuthHeaders(session),
+          credentials: "include",
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result?.error || "Gagal menghapus tracker");
 
-      if (error) throw error;
-
-      // Update UI by removing the deleted tracker
-      setTrackers(trackers.filter(t => t.id !== trackerId));
-      toast.success("Tracker berhasil dihapus", { id: "Tracker berhasil dihapus" });
-    } catch (error) {
-      console.error("Error deleting tracker:", error);
-      toast.error("Gagal menghapus tracker", { id: "Gagal menghapus tracker" });
-    } finally {
-      setDeleting(null);
-    }
+        // Update UI by removing the deleted tracker
+        setTrackers((prev) => prev.filter(t => t.id !== trackerId));
+        toast.success("Tracker berhasil dihapus", { id: "Tracker berhasil dihapus" });
+      } catch (error) {
+        console.error("Error deleting tracker:", error);
+        toast.error("Gagal menghapus tracker", { id: "Gagal menghapus tracker" });
+      } finally {
+        setDeleting(null);
+      }
+    });
   };
 
   return (
