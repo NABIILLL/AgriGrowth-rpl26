@@ -1,56 +1,72 @@
-"use client";
+"use client"; // Menandakan bahwa komponen ini di-render di sisi klien (Client Component)
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import HeaderWithModal from "@/components/HeaderWithModal";
-import { motion, Variants } from "framer-motion";
-import { useAuth, useClerk } from "@clerk/nextjs";
-import { useUser } from "@/hooks/useUser";
+import { useRouter } from "next/navigation"; // Hook dari Next.js untuk melakukan navigasi antar halaman
+import HeaderWithModal from "@/components/HeaderWithModal"; // Komponen header kustom dengan modal login/register
+import { motion, Variants } from "framer-motion"; // Pustaka untuk animasi interaktif dan transisi
+import { useAuth, useClerk } from "@clerk/nextjs"; // Hooks dari Clerk untuk manajemen status autentikasi dan kontrol UI autentikasi
+import { useUser } from "@/hooks/useUser"; // Hook kustom untuk mengambil data pengguna (seperti role/peran pengguna)
 
+// Varian animasi Framer Motion untuk mengatur efek pemuatan elemen anak secara berurutan (stagger)
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.15
+      staggerChildren: 0.15 // Memberikan jeda waktu 0.15 detik sebelum animasi elemen anak berikutnya dimulai
     }
   }
 };
 
+// Varian animasi Framer Motion untuk efek memudar dan bergeser ke atas (fade up)
 const fadeUpVariant: Variants = {
-  hidden: { opacity: 0, y: 30 },
+  hidden: { opacity: 0, y: 30 }, // Kondisi awal: tidak terlihat dan bergeser ke bawah 30px
   show: { 
     opacity: 1, 
-    y: 0,
-    transition: { type: "spring", stiffness: 70, damping: 15 } as const
+    y: 0, // Kondisi akhir: terlihat sepenuhnya dan berada di posisi aslinya
+    transition: { type: "spring", stiffness: 70, damping: 15 } as const // Efek pegas (spring) yang halus
   }
 };
 
+// Path untuk gambar latar belakang hero section dashboard
 const heroBackground =
   "/foto%20dashboard.png";
 
 export default function Home() {
+  // Mengambil status apakah user sudah login atau belum dari Clerk
   const { isSignedIn } = useAuth();
+  
+  // Fungsi dari Clerk untuk membuka modal pop-up sign in secara programatis
   const { openSignIn } = useClerk();
+  
+  // Instance router untuk navigasi halaman
   const router = useRouter();
+  
+  // Mengambil data user yang sedang login beserta status loading dari hook kustom
   const { user, isLoading } = useUser();
 
+  // Efek samping untuk mendeteksi jika user adalah admin, maka akan langsung dialihkan ke halaman admin
   useEffect(() => {
     if (!isLoading && isSignedIn && user?.role === "admin") {
       router.replace("/admin");
     }
   }, [isLoading, isSignedIn, router, user]);
 
+  // Handler saat tombol "Get Started" ditekan
   const handleGetStarted = () => {
     if (isSignedIn) {
+      // Jika sudah masuk, arahkan ke /admin jika perannya admin, atau /growth-tracker untuk user biasa
       router.push(user?.role === "admin" ? "/admin" : "/growth-tracker");
     } else {
+      // Jika belum masuk, buka modal login Clerk
       openSignIn();
     }
   };
 
   return (
+    // Kontainer utama halaman landing page dengan tema gelap dan tinggi penuh layar
     <main className="relative min-h-screen overflow-hidden bg-[#081018] text-white">
+      {/* Lapisan gambar latar belakang dengan overlay gradient agar teks lebih mudah dibaca */}
       <div
         aria-hidden
         className="absolute inset-0"
@@ -61,19 +77,23 @@ export default function Home() {
         }}
       />
 
+      {/* Komponen Header navigasi bagian atas */}
       <HeaderWithModal
         onSignUpClick={() => {}}
         onSignInClick={() => {}}
       />
 
+      {/* Kontainer konten utama dengan pembatasan lebar maksimal */}
       <div className="relative mx-auto flex w-full max-w-[1440px] flex-col px-5 pb-10 sm:px-10 lg:px-14 lg:pt-8">
 
+        {/* Section beranimasi menggunakan Framer Motion */}
         <motion.section 
           variants={staggerContainer}
           initial="hidden"
           animate="show"
           className="mt-20 w-full max-w-[860px] sm:mt-32 lg:mt-56"
         >
+          {/* Judul utama dengan efek animasi fade up */}
           <motion.h1 variants={fadeUpVariant} className="text-5xl font-extrabold leading-tight tracking-tight text-white sm:text-6xl lg:text-7xl">
             Simplifying Agricultural
             <br />
@@ -82,10 +102,12 @@ export default function Home() {
             Technology.
           </motion.h1>
 
+          {/* Deskripsi singkat mengenai platform AgriGrowth */}
           <motion.p variants={fadeUpVariant} className="mt-6 max-w-[840px] text-lg leading-relaxed text-white/90 sm:text-xl lg:text-2xl">
             A digital platform that helps researcher and students record, monitor, and analyze crop data in one place. From growth tracking and cost management to harvest predictions and insights, everything is designed to support smarter and more efficient agricultural decisions.
           </motion.p>
 
+          {/* Tombol aksi utama untuk memulai penggunaan aplikasi */}
           <motion.button
             variants={fadeUpVariant}
             onClick={handleGetStarted}
@@ -94,6 +116,7 @@ export default function Home() {
           >
             <span>Get Started</span>
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3b300] font-bold text-[#1a1a1a] sm:h-11 sm:w-11">
+              {/* Ikon panah penunjuk jalan */}
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
                 <path d="M5 12h14M12 5l7 7-7 7" stroke="#1a1a1a" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
               </svg>
