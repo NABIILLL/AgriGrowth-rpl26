@@ -214,14 +214,15 @@ export const getRequester = async (request: Request): Promise<ResolvedUser | nul
     if (clerkUser) return clerkUser;
   }
 
-  const authState = await auth();
-  if (!authState.userId) return null;
-
   try {
+    const authState = await auth();
+    if (!authState.userId) return null;
+
     const client = await clerkClient();
     const user = await client.users.getUser(authState.userId);
     return resolveClerkUser(authState.userId, user);
-  } catch {
+  } catch (error) {
+    console.warn("Clerk auth() failed (likely due to missing middleware):", error);
     return null;
   }
 };

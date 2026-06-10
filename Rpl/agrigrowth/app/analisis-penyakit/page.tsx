@@ -180,7 +180,7 @@ export default function AnalisisPenyakitPage() {
     }
 
     const compressed = await new Promise<{ base64: string; mimeType: string }>((resolve, reject) => {
-      const image = new Image();
+      const image = new window.Image();
       image.onload = () => {
         const { naturalWidth: width, naturalHeight: height } = image;
         const scale = Math.min(1, MAX_DIMENSION / Math.max(width, height));
@@ -236,7 +236,10 @@ export default function AnalisisPenyakitPage() {
 
       const response = await fetch("/api/analisis-penyakit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(await createAuthHeaders(session) || {}),
+        },
         body: JSON.stringify({
           imageBase64: base64,
           mimeType,

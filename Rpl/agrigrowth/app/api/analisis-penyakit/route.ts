@@ -303,7 +303,7 @@ Gunakan Bahasa Indonesia yang jelas untuk petani. Diagnosis harus SPESIFIK berda
       );
     }
     return NextResponse.json(
-      { error: "Terjadi kesalahan server." },
+      { error: `Terjadi kesalahan server: ${message}` },
       { status: 500 }
     );
   }

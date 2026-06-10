@@ -148,13 +148,14 @@ export default function Dashboard() {
       return;
     }
 
+    // Mengambil dan memvalidasi input form dari user
     const formData = new FormData(e.currentTarget);
-    const dayNumber = parseInt(formData.get("day_number") as string) || 1;
-    const plantHeight = parseFloat(formData.get("plant_height") as string) || null;
-    const leafCount = parseInt(formData.get("leaf_count") as string) || null;
-    const branchCount = parseInt(formData.get("branch_count") as string) || null;
-    const soilPh = parseFloat(formData.get("soil_ph") as string) || null;
-    const landArea = parseFloat(formData.get("land_area") as string) || null;
+    const dayNumber = parseInt(formData.get("day_number") as string) || 1; // Hari pengamatan
+    const plantHeight = parseFloat(formData.get("plant_height") as string) || null; // Tinggi tanaman (cm)
+    const leafCount = parseInt(formData.get("leaf_count") as string) || null; // Jumlah daun
+    const branchCount = parseInt(formData.get("branch_count") as string) || null; // Jumlah cabang
+    const soilPh = parseFloat(formData.get("soil_ph") as string) || null; // pH tanah
+    const landArea = parseFloat(formData.get("land_area") as string) || null; // Luas lahan
 
     if (dayNumber < 1) {
       toast.error("Hari pengamatan tidak valid.", { id: "Hari pengamatan tidak valid." });

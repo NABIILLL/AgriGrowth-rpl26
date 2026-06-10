@@ -28,6 +28,60 @@ const toNumber = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+async function recalculateAggregatedLogServer(trackerId: string, dayNumber: number) {
+  const supabase = getSupabaseService();
+  const { data: sampleRows, error: sampleRowsError } = await supabase
+    .from("growth_sample_logs")
+    .select("plant_height, leaf_count, branch_count, soil_ph, light_condition, plant_condition, fertilizer_type, land_area")
+    .eq("tracker_id", trackerId)
+    .eq("day_number", dayNumber);
+
+  if (sampleRowsError) {
+    throw sampleRowsError;
+  }
+
+  if (!sampleRows || sampleRows.length === 0) {
+    const { error: deleteError } = await supabase
+      .from("growth_logs")
+      .delete()
+      .eq("tracker_id", trackerId)
+      .eq("day_number", dayNumber);
+    if (deleteError) throw deleteError;
+    return;
+  }
+
+  const avg = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+  const aggregated = {
+    tracker_id: trackerId,
+    day_number: dayNumber,
+    plant_height: Number(avg(sampleRows.map((item) => Number(item.plant_height))).toFixed(2)),
+    leaf_count: Math.round(avg(sampleRows.map((item) => Number(item.leaf_count)))),
+    branch_count: Math.round(avg(sampleRows.map((item) => Number(item.branch_count || 0)))),
+    soil_ph: Number(avg(sampleRows.map((item) => Number(item.soil_ph))).toFixed(2)),
+    light_condition: sampleRows[0]?.light_condition || "Sangat Baik",
+    plant_condition: sampleRows[0]?.plant_condition || "Sehat",
+    fertilizer_type: sampleRows[0]?.fertilizer_type || "NPK",
+    land_area: Number(avg(sampleRows.map((item) => Number(item.land_area))).toFixed(2)),
+  };
+
+  const { data: existingGrowth, error: existingGrowthError } = await supabase
+    .from("growth_logs")
+    .select("id")
+    .eq("tracker_id", trackerId)
+    .eq("day_number", dayNumber)
+    .maybeSingle();
+
+  if (existingGrowthError) throw existingGrowthError;
+
+  if (existingGrowth?.id) {
+    const { error: updateError } = await supabase.from("growth_logs").update(aggregated).eq("id", existingGrowth.id);
+    if (updateError) throw updateError;
+  } else {
+    const { error: insertError } = await supabase.from("growth_logs").insert(aggregated);
+    if (insertError) throw insertError;
+  }
+}
+
 export async function POST(request: Request) {
   const { user, response } = await requireUser(request);
   if (response) return response;
@@ -92,6 +146,58 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ sample: sampleRow });
+    }
+
+    if (action === "add-observation") {
+      const trackerId = typeof payload?.trackerId === "string" ? payload.trackerId.trim() : "";
+      const sampleId = typeof payload?.sampleId === "string" ? payload.sampleId.trim() : "";
+      const dayNumber = Number(payload?.dayNumber);
+      const plantHeight = Number(payload?.plantHeight);
+      const leafCount = Number(payload?.leafCount);
+      const branchCount = Number(payload?.branchCount || 0);
+      const soilPh = Number(payload?.soilPh);
+      const lightCondition = typeof payload?.lightCondition === "string" ? payload.lightCondition.trim() : "";
+      const plantCondition = typeof payload?.plantCondition === "string" ? payload.plantCondition.trim() : "";
+      const fertilizerType = typeof payload?.fertilizerType === "string" ? payload.fertilizerType.trim() : "";
+      const landArea = Number(payload?.landArea);
+
+      if (!trackerId || !sampleId || !dayNumber || Number.isNaN(plantHeight) || Number.isNaN(leafCount) || Number.isNaN(soilPh) || !lightCondition || !plantCondition || !fertilizerType || Number.isNaN(landArea)) {
+        return NextResponse.json({ error: "Missing or invalid required fields" }, { status: 400 });
+      }
+
+      const supabase = getSupabaseService();
+      const { data: trackerRow, error: trackerError } = await supabase
+        .from("trackers")
+        .select("id, user_id")
+        .eq("id", trackerId)
+        .maybeSingle();
+
+      if (trackerError) return NextResponse.json({ error: trackerError.message }, { status: 500 });
+      if (!trackerRow) return NextResponse.json({ error: "Tracker not found" }, { status: 404 });
+      if (trackerRow.user_id !== user.id) return NextResponse.json({ error: "Not authorized to modify this tracker" }, { status: 403 });
+
+      const { error: sampleInsertError } = await supabase.from("growth_sample_logs").insert({
+        id: crypto.randomUUID(),
+        tracker_id: trackerId,
+        sample_id: sampleId,
+        day_number: dayNumber,
+        plant_height: plantHeight,
+        leaf_count: leafCount,
+        branch_count: branchCount,
+        soil_ph: soilPh,
+        light_condition: lightCondition,
+        plant_condition: plantCondition,
+        fertilizer_type: fertilizerType,
+        land_area: landArea,
+      });
+
+      if (sampleInsertError) {
+        return NextResponse.json({ error: sampleInsertError.message }, { status: 500 });
+      }
+
+      await recalculateAggregatedLogServer(trackerId, dayNumber);
+
+      return NextResponse.json({ success: true });
     }
 
     const title = typeof payload?.title === "string" ? payload.title.trim() : "";
@@ -325,13 +431,51 @@ export async function DELETE(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const trackerId = searchParams.get("trackerId")?.trim();
-
-    if (!trackerId) {
-      return NextResponse.json({ error: "trackerId is required" }, { status: 400 });
-    }
+    const logId = searchParams.get("logId")?.trim();
 
     const supabase = getSupabaseService();
+
+    if (logId) {
+      // 1. Verify ownership of the tracker associated with this log
+      const { data: logRow, error: logError } = await supabase
+        .from("growth_sample_logs")
+        .select("id, tracker_id, day_number")
+        .eq("id", logId)
+        .maybeSingle();
+
+      if (logError) return NextResponse.json({ error: logError.message }, { status: 500 });
+      if (!logRow) return NextResponse.json({ error: "Observation log not found" }, { status: 404 });
+
+      const { data: trackerRow, error: trackerError } = await supabase
+        .from("trackers")
+        .select("id, user_id")
+        .eq("id", logRow.tracker_id)
+        .maybeSingle();
+
+      if (trackerError) return NextResponse.json({ error: trackerError.message }, { status: 500 });
+      if (!trackerRow) return NextResponse.json({ error: "Tracker not found" }, { status: 404 });
+      if (trackerRow.user_id !== user.id) return NextResponse.json({ error: "Not authorized to delete this observation log" }, { status: 403 });
+
+      // 2. Delete the observation log
+      const { error: deleteError } = await supabase
+        .from("growth_sample_logs")
+        .delete()
+        .eq("id", logId);
+
+      if (deleteError) {
+        return NextResponse.json({ error: deleteError.message }, { status: 500 });
+      }
+
+      // 3. Recalculate aggregated log
+      await recalculateAggregatedLogServer(logRow.tracker_id, Number(logRow.day_number));
+
+      return NextResponse.json({ success: true });
+    }
+
+    const trackerId = searchParams.get("trackerId")?.trim();
+    if (!trackerId) {
+      return NextResponse.json({ error: "trackerId or logId is required" }, { status: 400 });
+    }
 
     // Verify ownership
     const { data: trackerRow, error: trackerError } = await supabase.from("trackers").select("id, user_id").eq("id", trackerId).maybeSingle();
@@ -357,7 +501,118 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to delete tracker";
+    const message = error instanceof Error ? error.message : "Failed to delete";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const { user, response } = await requireUser(request);
+  if (response) return response;
+
+  try {
+    const payload = await request.json();
+    const action = typeof payload?.action === "string" ? payload.action.trim() : "";
+    const logId = typeof payload?.id === "string" ? payload.id.trim() : "";
+
+    if (!logId) {
+      return NextResponse.json({ error: "id is required" }, { status: 400 });
+    }
+
+    const supabase = getSupabaseService();
+
+    if (action === "update-disease") {
+      // 1. Verify that the log belongs to a tracker owned by the user
+      const { data: logRow, error: logError } = await supabase
+        .from("disease_analysis_logs")
+        .select("id, tracker_id")
+        .eq("id", logId)
+        .maybeSingle();
+
+      if (logError) return NextResponse.json({ error: logError.message }, { status: 500 });
+      if (!logRow) return NextResponse.json({ error: "Disease analysis log not found" }, { status: 404 });
+
+      const { data: trackerRow, error: trackerError } = await supabase
+        .from("trackers")
+        .select("id, user_id")
+        .eq("id", logRow.tracker_id)
+        .maybeSingle();
+
+      if (trackerError) return NextResponse.json({ error: trackerError.message }, { status: 500 });
+      if (!trackerRow) return NextResponse.json({ error: "Tracker not found" }, { status: 404 });
+      if (trackerRow.user_id !== user.id) return NextResponse.json({ error: "Not authorized to modify this tracker" }, { status: 403 });
+
+      // 2. Perform the update
+      const { error: updateError } = await supabase
+        .from("disease_analysis_logs")
+        .update({
+          status: String(payload.status).trim(),
+          severity: String(payload.severity).trim(),
+          urgency: String(payload.urgency).trim(),
+        })
+        .eq("id", logId);
+
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    // Verify that the log belongs to a tracker owned by the user
+    const { data: logRow, error: logError } = await supabase
+      .from("growth_sample_logs")
+      .select("id, tracker_id, day_number")
+      .eq("id", logId)
+      .maybeSingle();
+
+    if (logError) return NextResponse.json({ error: logError.message }, { status: 500 });
+    if (!logRow) return NextResponse.json({ error: "Observation log not found" }, { status: 404 });
+
+    const { data: trackerRow, error: trackerError } = await supabase
+      .from("trackers")
+      .select("id, user_id")
+      .eq("id", logRow.tracker_id)
+      .maybeSingle();
+
+    if (trackerError) return NextResponse.json({ error: trackerError.message }, { status: 500 });
+    if (!trackerRow) return NextResponse.json({ error: "Tracker not found" }, { status: 404 });
+    if (trackerRow.user_id !== user.id) return NextResponse.json({ error: "Not authorized to modify this tracker" }, { status: 403 });
+
+    const dayNumber = Number(payload.day_number);
+    const oldDayNumber = Number(logRow.day_number);
+
+    const updatePayload = {
+      day_number: dayNumber,
+      plant_height: Number(payload.plant_height),
+      leaf_count: Number(payload.leaf_count),
+      branch_count: Number(payload.branch_count || 0),
+      soil_ph: Number(payload.soil_ph),
+      light_condition: String(payload.light_condition).trim(),
+      plant_condition: String(payload.plant_condition).trim(),
+      fertilizer_type: String(payload.fertilizer_type).trim(),
+      land_area: Number(payload.land_area),
+    };
+
+    const { error: updateError } = await supabase
+      .from("growth_sample_logs")
+      .update(updatePayload)
+      .eq("id", logId);
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    // Recalculate aggregated log for the new/updated day number
+    await recalculateAggregatedLogServer(logRow.tracker_id, dayNumber);
+    // If the day number was changed, recalculate the old day number as well
+    if (oldDayNumber !== dayNumber) {
+      await recalculateAggregatedLogServer(logRow.tracker_id, oldDayNumber);
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to update observation log";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
