@@ -10,6 +10,7 @@ import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 
 import { motion, Variants } from "framer-motion";
 
+// Animasi kontainer framer-motion
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -20,6 +21,7 @@ const staggerContainer: Variants = {
   }
 };
 
+// Animasi fade up framer-motion
 const fadeUpVariant: Variants = {
   hidden: { opacity: 0, y: 30 },
   show: { 
@@ -29,19 +31,25 @@ const fadeUpVariant: Variants = {
   }
 };
 
+// URL icon profil default
 const imgProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 
 export default function About() {
+  // Mengambil data user dan status loading
   const { user, isLoading } = useUser();
+  // Fungsi login Clerk
   const { openSignIn } = useClerk();
+  // State untuk toggle menu mobile
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Hook untuk konfirmasi logout
   const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
 
   return (
     <main className="min-h-screen bg-white text-[#365a1a]">
+      {/* Header global */}
       <GlobalHeader variant="light" />
 
-      {/* Content */}
+      {/* Konten Utama */}
       <motion.section 
         variants={staggerContainer}
         initial="hidden"
@@ -71,6 +79,7 @@ export default function About() {
           </div>
 
           {/* Stats Cards */}
+          {/* Kartu Statistik Lahan & Komoditas */}
           <div 
             className="mt-12"
             style={{
@@ -80,7 +89,7 @@ export default function About() {
               justifyContent: 'center'
             }}
           >
-            {/* Komoditas Card */}
+            {/* Kartu Komoditas Tanaman */}
             <motion.div 
               variants={fadeUpVariant}
               className="rounded-[20px] border-2 border-[#d9d9d9] bg-white p-4 sm:p-6 shadow-[0px_4px_4px_rgba(0,0,0,0.1)]"
@@ -95,7 +104,7 @@ export default function About() {
               </p>
             </motion.div>
 
-            {/* Fitur Utama Card */}
+            {/* Kartu Jumlah Fitur Utama */}
             <motion.div 
               variants={fadeUpVariant}
               className="rounded-[20px] border-2 border-[#d9d9d9] bg-white p-4 sm:p-6 shadow-[0px_4px_4px_rgba(0,0,0,0.1)]"
@@ -108,7 +117,7 @@ export default function About() {
               <p className="mt-2 text-xs sm:text-[13px] text-[#365a1a]">Terintegrasi penuh</p>
             </motion.div>
 
-            {/* Platform Card */}
+            {/* Kartu Platform Aplikasi */}
             <motion.div 
               variants={fadeUpVariant}
               className="rounded-[20px] border-2 border-[#d9d9d9] bg-white p-4 sm:p-6 shadow-[0px_4px_4px_rgba(0,0,0,0.1)]"
@@ -123,7 +132,7 @@ export default function About() {
           </div>
         </div>
 
-        {/* Growth Tracker Section */}
+        {/* Bagian Growth Tracker */}
         <div className="mt-16 sm:mt-20 pt-12 sm:pt-16 border-t-2 border-[#d9d9d9]">
           <motion.article variants={fadeUpVariant} className="rounded-[20px] sm:rounded-[30px] bg-white p-4 sm:p-5 md:p-6 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.2),-6px_6px_15px_0px_rgba(0,0,0,0.2)]">
             <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-center md:gap-8">
@@ -142,7 +151,7 @@ export default function About() {
             </div>
           </motion.article>
 
-          {/* Features List */}
+          {/* Daftar Fitur Utama */}
           <motion.div variants={fadeUpVariant} className="mt-6 rounded-[20px] sm:rounded-[30px] bg-white p-4 sm:p-6 md:p-8 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.2),-6px_6px_15px_0px_rgba(0,0,0,0.2)]">
             <h3 className="text-[24px] sm:text-[32px] font-bold md:text-[40px]">Fitur Growth Tracker</h3>
 

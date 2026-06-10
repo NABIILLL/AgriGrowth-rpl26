@@ -33,18 +33,18 @@ export default function GrowthMonitoringDashboard({
   const { user, isLoading } = useUser();
   const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
 
-  // Convert height strings to numeric values for charting
+  // Mengonversi tinggi tanaman string menjadi angka untuk grafik
   const heightValue = (heightStr: string) => {
     const match = heightStr.match(/(\d+)/);
     return match ? parseInt(match[1]) : 0;
   };
 
-  // Prepare chart data
+  // Menyiapkan data untuk pemetaan grafik (LineChart)
   const chartData = measurements.map((m) => ({
     day: m.day,
-    height: heightValue(m.height),
-    leaves: m.leaves,
-    branches: m.branches,
+    height: heightValue(m.height), // Konversi tinggi ke tipe number
+    leaves: m.leaves,             // Jumlah daun
+    branches: m.branches,         // Jumlah cabang
   }));
 
   return (

@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
+import { createClerkSupabaseClient } from "@/lib/supabaseClient";
+import { getClerkSupabaseToken } from "@/lib/clerkSupabaseToken";
 import { useUser } from "@/hooks/useUser";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import GlobalHeader from "@/components/GlobalHeader";
@@ -97,6 +99,10 @@ interface DiseaseAnalysisLogData {
   severity: string;
   urgency: string;
   detected_as?: string | null;
+  gejala?: string[] | null;
+  penyebab?: string | null;
+  solusi?: string[] | null;
+  pencegahan?: string[] | null;
   raw_text?: string | null;
   created_at?: string;
 }
@@ -118,6 +124,12 @@ async function createAuthHeaders(session: ReturnType<typeof useSession>["session
 }
 
 export default function ObservationHistoryPage() {
+  async function getAuthSupabase() {
+    const token = await getClerkSupabaseToken();
+    if (!token) throw new Error("Sesi login tidak ditemukan. Silakan login ulang.");
+    return createClerkSupabaseClient(token);
+  }
+
   const [costs, setCosts] = useState<any[]>([]);
   const [editingCost, setEditingCost] = useState<any | null>(null);
   const [showCostForm, setShowCostForm] = useState(false);
@@ -126,10 +138,33 @@ export default function ObservationHistoryPage() {
   const [trackerTitle, setTrackerTitle] = useState<string>("");
   const [selectedTrackerId, setSelectedTrackerId] = useState<string | null>(null);
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
-  const [chartData, setChartData] = useState<any[]>([]);
   const [logsRaw, setLogsRaw] = useState<any[]>([]);
   const [trackerSamples, setTrackerSamples] = useState<any[]>([]);
   const [sampleLogsRaw, setSampleLogsRaw] = useState<any[]>([]);
+  const [expandedDiseaseLogIds, setExpandedDiseaseLogIds] = useState<Record<string, boolean>>({});
+  const [editingDiseaseLog, setEditingDiseaseLog] = useState<any | null>(null);
+
+  const activeSampleLogs = useMemo(() => {
+    if (!selectedSampleId) return [];
+    return sampleLogsRaw
+      .filter((log) => String(log.sample_id) === String(selectedSampleId))
+      .sort((a, b) => a.day_number - b.day_number);
+  }, [selectedSampleId, sampleLogsRaw]);
+
+  const chartData = useMemo(() => {
+    const activeLogs = selectedSampleId
+      ? sampleLogsRaw.filter((log) => String(log.sample_id) === String(selectedSampleId))
+      : logsRaw;
+
+    return activeLogs
+      .map((log: any) => ({
+        day: `Hari ${log.day_number}`,
+        dayNumber: log.day_number,
+        height: log.plant_height || 0,
+        leaf: log.leaf_count || 0,
+      }))
+      .sort((a, b) => a.dayNumber - b.dayNumber);
+  }, [selectedSampleId, sampleLogsRaw, logsRaw]);
   const [diseaseAnalysisLogs, setDiseaseAnalysisLogs] = useState<DiseaseAnalysisLogData[]>([]);
   const [editingLog, setEditingLog] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<string>("pengamatan");
@@ -172,15 +207,30 @@ export default function ObservationHistoryPage() {
   });
   
   // Analysis stats
-  const [stats, setStats] = useState({
-    startHeight: 0,
-    endHeight: 0,
-    startLeaf: 0,
-    endLeaf: 0,
-    daysSpan: 0,
-    avgHeightGrowth: 0,
-    avgLeafGrowth: 0
-  });
+  const stats = useMemo(() => {
+    const activeLogs = selectedSampleId
+      ? sampleLogsRaw.filter((log) => String(log.sample_id) === String(selectedSampleId))
+      : logsRaw;
+
+    if (activeLogs.length === 0) {
+      return { startHeight: 0, endHeight: 0, startLeaf: 0, endLeaf: 0, daysSpan: 0, avgHeightGrowth: 0, avgLeafGrowth: 0 };
+    }
+
+    const sorted = [...activeLogs].sort((a, b) => a.day_number - b.day_number);
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const daysSpan = Math.max(1, last.day_number - first.day_number || 1);
+
+    return {
+      startHeight: first.plant_height || 0,
+      endHeight: last.plant_height || 0,
+      startLeaf: first.leaf_count || 0,
+      endLeaf: last.leaf_count || 0,
+      daysSpan,
+      avgHeightGrowth: ((last.plant_height || 0) - (first.plant_height || 0)) / daysSpan,
+      avgLeafGrowth: ((last.leaf_count || 0) - (first.leaf_count || 0)) / daysSpan,
+    };
+  }, [selectedSampleId, sampleLogsRaw, logsRaw]);
   const { user, isLoading } = useUser();
   const userId = user?.id;
   const [isExporting, setIsExporting] = useState(false);
@@ -338,19 +388,22 @@ export default function ObservationHistoryPage() {
       return;
     }
 
+    // Fungsi pembantu perhitungan rata-rata
     const avg = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+    // Normalisasi jumlah sampel max 20
     const normalizedSampleCount = Math.min(20, Math.max(1, sampleInputs.length));
 
+    // Perhitungan rata-rata untuk data logbook awal
     const initialLog = {
       day_number: 1,
-      plant_height: Number(avg(parsedSamples.map((item) => item.plant_height)).toFixed(2)),
-      leaf_count: Math.round(avg(parsedSamples.map((item) => item.leaf_count))),
-      branch_count: Math.round(avg(parsedSamples.map((item) => item.branch_count))),
-      soil_ph: Number(avg(parsedSamples.map((item) => item.soil_ph)).toFixed(2)),
+      plant_height: Number(avg(parsedSamples.map((item) => item.plant_height)).toFixed(2)), // Rata-rata tinggi tanaman
+      leaf_count: Math.round(avg(parsedSamples.map((item) => item.leaf_count))), // Rata-rata jumlah daun
+      branch_count: Math.round(avg(parsedSamples.map((item) => item.branch_count))), // Rata-rata jumlah cabang
+      soil_ph: Number(avg(parsedSamples.map((item) => item.soil_ph)).toFixed(2)), // Rata-rata pH tanah
       light_condition: parsedSamples[0].light_condition,
       plant_condition: parsedSamples[0].plant_condition,
       fertilizer_type: parsedSamples[0].fertilizer_type,
-      land_area: Number(avg(parsedSamples.map((item) => item.land_area)).toFixed(2)),
+      land_area: Number(avg(parsedSamples.map((item) => item.land_area)).toFixed(2)), // Rata-rata luas lahan
     };
 
     const forecastContext: ForecastContext = {
@@ -398,21 +451,7 @@ export default function ObservationHistoryPage() {
       setTrackerSamples(trackerSampleRows);
       setSampleLogsRaw(sampleLogRows);
       setDiseaseAnalysisLogs([]);
-      setChartData(growthLogRow ? [{
-        day: `Hari ${growthLogRow.day_number}`,
-        dayNumber: growthLogRow.day_number,
-        height: growthLogRow.plant_height,
-        leaf: growthLogRow.leaf_count,
-      }] : []);
-      setStats(growthLogRow ? {
-        startHeight: growthLogRow.plant_height,
-        endHeight: growthLogRow.plant_height,
-        startLeaf: growthLogRow.leaf_count,
-        endLeaf: growthLogRow.leaf_count,
-        daysSpan: 1,
-        avgHeightGrowth: 0,
-        avgLeafGrowth: 0,
-      } : { startHeight: 0, endHeight: 0, startLeaf: 0, endLeaf: 0, daysSpan: 0, avgHeightGrowth: 0, avgLeafGrowth: 0 });
+
 
       setTrackers((prev) => [trackerData, ...prev]);
       setSelectedTrackerId(trackerData.id);
@@ -495,56 +534,8 @@ export default function ObservationHistoryPage() {
 
         if (!response.ok) throw new Error(result?.error || "Failed to load history");
 
-        const logs = result.logs || [];
-        setLogsRaw(logs);
+        setLogsRaw(result.logs || []);
         setDiseaseAnalysisLogs(result.disease_analysis_logs || []);
-
-        if (logs.length > 0) {
-          const data = logs.map((log: any) => ({
-            day: `Hari ${log.day_number}`,
-            dayNumber: log.day_number,
-            height: log.plant_height || 0,
-            leaf: log.leaf_count || 0,
-          }));
-
-          setChartData(data);
-
-          const first = data[0];
-          const last = data[data.length - 1];
-          const daysSpan = last.dayNumber - first.dayNumber || 1;
-
-          const newStats = {
-            startHeight: first.height,
-            endHeight: last.height,
-            startLeaf: first.leaf,
-            endLeaf: last.leaf,
-            daysSpan,
-            avgHeightGrowth: (last.height - first.height) / daysSpan,
-            avgLeafGrowth: (last.leaf - first.leaf) / daysSpan
-          };
-          setStats(newStats);
-        } else {
-          const fallbackData = buildFallbackChartData(result.growth_sample_logs || []);
-          setChartData(fallbackData);
-
-          if (fallbackData.length > 0) {
-            const first = fallbackData[0];
-            const last = fallbackData[fallbackData.length - 1];
-            const daysSpan = Math.max(1, last.dayNumber - first.dayNumber || 1);
-
-            setStats({
-              startHeight: first.height,
-              endHeight: last.height,
-              startLeaf: first.leaf,
-              endLeaf: last.leaf,
-              daysSpan,
-              avgHeightGrowth: (last.height - first.height) / daysSpan,
-              avgLeafGrowth: (last.leaf - first.leaf) / daysSpan,
-            });
-          } else {
-            setStats({ startHeight: 0, endHeight: 0, startLeaf: 0, endLeaf: 0, daysSpan: 0, avgHeightGrowth: 0, avgLeafGrowth: 0 });
-          }
-        }
       } catch (error) {
         console.error("Error fetching chart data:", error);
       }
@@ -604,11 +595,14 @@ export default function ObservationHistoryPage() {
       leaf: log.leaf_count || 0,
     }));
 
+  // Fungsi pembantu pengolahan data fallback chart
   const buildFallbackChartData = (sampleLogs: typeof sampleLogsRaw) => {
     if (!sampleLogs.length) return [];
 
+    // Map untuk mengelompokkan data pengamatan berdasarkan hari
     const grouped = new Map<number, { heightTotal: number; leafTotal: number; count: number }>();
 
+    // Mengakumulasikan tinggi dan jumlah daun per hari
     sampleLogs.forEach((log) => {
       const dayNumber = Number(log.day_number || 1);
       const bucket = grouped.get(dayNumber) || { heightTotal: 0, leafTotal: 0, count: 0 };
@@ -618,13 +612,14 @@ export default function ObservationHistoryPage() {
       grouped.set(dayNumber, bucket);
     });
 
+    // Menghitung rata-rata tinggi dan daun untuk data chart
     return Array.from(grouped.entries())
       .sort(([a], [b]) => a - b)
       .map(([dayNumber, bucket]) => ({
         day: `Hari ${dayNumber}`,
         dayNumber,
-        height: Number((bucket.heightTotal / bucket.count).toFixed(2)),
-        leaf: Math.round(bucket.leafTotal / bucket.count),
+        height: Number((bucket.heightTotal / bucket.count).toFixed(2)), // Rata-rata tinggi tanaman
+        leaf: Math.round(bucket.leafTotal / bucket.count), // Rata-rata jumlah daun
       }));
   };
 
@@ -650,6 +645,8 @@ export default function ObservationHistoryPage() {
     });
   };
 
+
+
   async function refreshSelectedTrackerData(trackerId: string, preferredSampleId?: string) {
     const response = await fetch(`/api/observation/history?trackerId=${encodeURIComponent(trackerId)}&plantType=${encodeURIComponent(id || "")}`, {
       headers: await createAuthHeaders(session),
@@ -664,53 +661,10 @@ export default function ObservationHistoryPage() {
     const logs = result.logs || [];
     setLogsRaw(logs);
 
-    if (logs.length > 0) {
-      const data = logs.map((log: any) => ({
-        day: `Hari ${log.day_number}`,
-        dayNumber: log.day_number,
-        height: log.plant_height || 0,
-        leaf: log.leaf_count || 0,
-      }));
 
-      setChartData(data);
-
-      const first = data[0];
-      const last = data[data.length - 1];
-      const daysSpan = last.dayNumber - first.dayNumber || 1;
-
-      setStats({
-        startHeight: first.height,
-        endHeight: last.height,
-        startLeaf: first.leaf,
-        endLeaf: last.leaf,
-        daysSpan,
-        avgHeightGrowth: (last.height - first.height) / daysSpan,
-        avgLeafGrowth: (last.leaf - first.leaf) / daysSpan,
-      });
-    } else {
-      const fallbackData = buildFallbackChartData(result.growth_sample_logs || []);
-      setChartData(fallbackData);
-
-      if (fallbackData.length > 0) {
-        const first = fallbackData[0];
-        const last = fallbackData[fallbackData.length - 1];
-        const daysSpan = Math.max(1, last.dayNumber - first.dayNumber || 1);
-
-        setStats({
-          startHeight: first.height,
-          endHeight: last.height,
-          startLeaf: first.leaf,
-          endLeaf: last.leaf,
-          daysSpan,
-          avgHeightGrowth: (last.height - first.height) / daysSpan,
-          avgLeafGrowth: (last.leaf - first.leaf) / daysSpan,
-        });
-      } else {
-        setStats({ startHeight: 0, endHeight: 0, startLeaf: 0, endLeaf: 0, daysSpan: 0, avgHeightGrowth: 0, avgLeafGrowth: 0 });
-      }
-    }
 
     const nextSamples = result.tracker_samples || [];
+    setSampleLogsRaw(result.growth_sample_logs || []);
     setDiseaseAnalysisLogs(result.disease_analysis_logs || []);
 
     const preferredSampleExists = preferredSampleId && nextSamples.some((sample: any) => String(sample.id) === String(preferredSampleId));
@@ -793,70 +747,33 @@ export default function ObservationHistoryPage() {
 
     setInputSubmitting(true);
     try {
-      const { error: sampleInsertError } = await supabase.from("growth_sample_logs").insert({
-        tracker_id: selectedTracker.id,
-        sample_id: selectedSample.id,
-        day_number: dayNumber,
-        plant_height: plantHeight,
-        leaf_count: leafCount,
-        branch_count: branchCount,
-        soil_ph: soilPh,
-        light_condition: sampleObservationInput.lightCondition.trim(),
-        plant_condition: sampleObservationInput.plantCondition.trim(),
-        fertilizer_type: sampleObservationInput.fertilizerType.trim(),
-        land_area: landArea,
+      const response = await fetch("/api/observation/history", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await createAuthHeaders(session) || {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          action: "add-observation",
+          trackerId: selectedTracker.id,
+          sampleId: selectedSample.id,
+          dayNumber,
+          plantHeight,
+          leafCount,
+          branchCount,
+          soilPh,
+          lightCondition: sampleObservationInput.lightCondition.trim(),
+          plantCondition: sampleObservationInput.plantCondition.trim(),
+          fertilizerType: sampleObservationInput.fertilizerType.trim(),
+          landArea,
+        }),
       });
 
-      if (sampleInsertError) {
-        throw sampleInsertError;
-      }
+      const result = await readJsonResponse(response);
 
-      const { data: sampleRows, error: sampleRowsError } = await supabase
-        .from("growth_sample_logs")
-        .select("plant_height, leaf_count, branch_count, soil_ph, light_condition, plant_condition, fertilizer_type, land_area")
-        .eq("tracker_id", selectedTracker.id)
-        .eq("day_number", dayNumber);
-
-      if (sampleRowsError) {
-        throw sampleRowsError;
-      }
-
-      const sampleLogs = (sampleRows || []) as Array<{ plant_height: number; leaf_count: number; branch_count: number; soil_ph: number; light_condition: string; plant_condition: string; fertilizer_type: string; land_area: number }>;
-      const avg = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
-      const aggregated = {
-        tracker_id: selectedTracker.id,
-        day_number: dayNumber,
-        plant_height: Number(avg(sampleLogs.map((item) => Number(item.plant_height))).toFixed(2)),
-        leaf_count: Math.round(avg(sampleLogs.map((item) => Number(item.leaf_count)))),
-        branch_count: Math.round(avg(sampleLogs.map((item) => Number(item.branch_count || 0)))),
-        soil_ph: Number(avg(sampleLogs.map((item) => Number(item.soil_ph))).toFixed(2)),
-        light_condition: sampleObservationInput.lightCondition.trim(),
-        plant_condition: sampleObservationInput.plantCondition.trim(),
-        fertilizer_type: sampleObservationInput.fertilizerType.trim(),
-        land_area: Number(avg(sampleLogs.map((item) => Number(item.land_area))).toFixed(2)),
-      };
-
-      const { data: existingGrowth, error: existingGrowthError } = await supabase
-        .from("growth_logs")
-        .select("id")
-        .eq("tracker_id", selectedTracker.id)
-        .eq("day_number", dayNumber)
-        .maybeSingle();
-
-      if (existingGrowthError) {
-        throw existingGrowthError;
-      }
-
-      if (existingGrowth?.id) {
-        const { error: updateError } = await supabase.from("growth_logs").update(aggregated).eq("id", existingGrowth.id);
-        if (updateError) {
-          throw updateError;
-        }
-      } else {
-        const { error: insertError } = await supabase.from("growth_logs").insert(aggregated);
-        if (insertError) {
-          throw insertError;
-        }
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal menyimpan data pengamatan");
       }
 
       await refreshSelectedTrackerData(selectedTracker.id, selectedSample.id);
@@ -887,34 +804,7 @@ export default function ObservationHistoryPage() {
       const logs = logsData || [];
       setLogsRaw(logs);
 
-      if (logs.length > 0) {
-        const data = logs.map((log: any) => ({
-          day: `Hari ${log.day_number}`,
-          dayNumber: log.day_number,
-          height: log.plant_height || 0,
-          leaf: log.leaf_count || 0,
-        }));
 
-        setChartData(data);
-
-        const first = data[0];
-        const last = data[data.length - 1];
-        const daysSpan = last.dayNumber - first.dayNumber || 1;
-
-        const newStats = {
-          startHeight: first.height,
-          endHeight: last.height,
-          startLeaf: first.leaf,
-          endLeaf: last.leaf,
-          daysSpan,
-          avgHeightGrowth: (last.height - first.height) / daysSpan,
-          avgLeafGrowth: (last.leaf - first.leaf) / daysSpan
-        };
-        setStats(newStats);
-      } else {
-        setChartData([]);
-        setStats({ startHeight: 0, endHeight: 0, startLeaf: 0, endLeaf: 0, daysSpan: 0, avgHeightGrowth: 0, avgLeafGrowth: 0 });
-      }
     } catch (err) {
       console.error("Error reloading logs:", err);
       toast.error("Gagal memuat ulang data", { id: "Gagal memuat ulang data" });
@@ -950,28 +840,31 @@ export default function ObservationHistoryPage() {
   function handleDeleteLog(logId: string) {
     confirmAction("Hapus data pengamatan ini? Tindakan ini tidak dapat dibatalkan.", async () => {
       try {
-        // Optimistic UI update: remove locally immediately
-        setLogsRaw((prev) => prev.filter((l) => String(l.id) !== String(logId)));
-
-        // Send delete request. Include tracker_id to match RLS policies if present.
-        const query = supabase.from("growth_logs").delete().eq("id", logId);
-        if (selectedTrackerId) query.eq("tracker_id", selectedTrackerId);
-
-        const { data, error } = await query.select();
-        console.log('delete result', { data, error });
-
-        if (error) {
-          // revert optimistic removal on failure
-          await reloadLogs();
-          console.error("Error deleting log:", error);
-          toast.error(`Gagal menghapus data: ${error.message || "unknown"}`, { id: `Gagal menghapus data: ${error.message || "unknown"}` });
+        const logToDelete = sampleLogsRaw.find(l => String(l.id) === String(logId));
+        if (!logToDelete) {
+          toast.error("Data tidak ditemukan");
           return;
         }
+        const trackerId = logToDelete.tracker_id;
 
-        // Success
+        const response = await fetch(`/api/observation/history?logId=${encodeURIComponent(logId)}`, {
+          method: "DELETE",
+          headers: await createAuthHeaders(session),
+          credentials: "include",
+        });
+
+        const result = await readJsonResponse(response);
+
+        if (!response.ok) {
+          throw new Error(result?.error || "Gagal menghapus data pengamatan");
+        }
+
+        if (trackerId) {
+          await refreshSelectedTrackerData(trackerId, selectedSampleId || undefined);
+        }
+
         toast.success("Data pengamatan dihapus", { id: "Data pengamatan dihapus" });
-        await reloadLogs();
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
         toast.error("Gagal menghapus data pengamatan", { id: "Gagal menghapus data pengamatan" });
       }
@@ -982,26 +875,89 @@ export default function ObservationHistoryPage() {
   async function handleUpdateLog(updated: any) {
     try {
       const payload: any = {
+        id: updated.id,
         day_number: parseInt(String(updated.day_number)),
         plant_height: parseFloat(String(updated.plant_height)),
         leaf_count: parseInt(String(updated.leaf_count)),
         branch_count: updated.branch_count ? parseInt(String(updated.branch_count)) : 0,
         soil_ph: parseFloat(String(updated.soil_ph || 7)),
-        light_condition: updated.light_condition || "",
-        plant_condition: updated.plant_condition || "",
-        fertilizer_type: updated.fertilizer_type || "",
+        light_condition: updated.light_condition || "Sangat Baik",
+        plant_condition: updated.plant_condition || "Sehat",
+        fertilizer_type: updated.fertilizer_type || "NPK",
         land_area: updated.land_area ? parseFloat(String(updated.land_area)) : 1,
       };
 
-      const { error } = await supabase.from("growth_logs").update(payload).eq("id", updated.id);
-      if (error) throw error;
+      const response = await fetch("/api/observation/history", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await createAuthHeaders(session) || {}),
+        },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+
+      const result = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal memperbarui data");
+      }
+
+      if (selectedTrackerId) {
+        await refreshSelectedTrackerData(selectedTrackerId, selectedSampleId || undefined);
+      }
 
       toast.success("Data pengamatan berhasil diperbarui", { id: "Data pengamatan berhasil diperbarui" });
       setEditingLog(null);
-      await reloadLogs();
     } catch (err: any) {
       console.error("Error updating log:", err);
       toast.error(`Gagal memperbarui data: ${err?.message ?? "unknown"}`, { id: `Gagal memperbarui data: ${err?.message ?? "unknown"}` });
+    }
+  }
+
+  const toggleExpandDiseaseLog = (id: string) => {
+    setExpandedDiseaseLogIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  async function handleUpdateDiseaseLog(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingDiseaseLog) return;
+
+    try {
+      const response = await fetch("/api/observation/history", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await createAuthHeaders(session) || {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          action: "update-disease",
+          id: editingDiseaseLog.id,
+          status: editingDiseaseLog.status,
+          severity: editingDiseaseLog.severity,
+          urgency: editingDiseaseLog.urgency,
+        }),
+      });
+
+      const result = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Gagal memperbarui status penyakit");
+      }
+
+      if (selectedTrackerId) {
+        await refreshSelectedTrackerData(selectedTrackerId, selectedSampleId || undefined);
+      }
+
+      toast.success("Status penyakit berhasil diperbarui", { id: "Status penyakit berhasil diperbarui" });
+      setEditingDiseaseLog(null);
+    } catch (err: any) {
+      console.error("Error updating disease log:", err);
+      toast.error(`Gagal memperbarui status: ${err?.message ?? "unknown"}`, { id: `Gagal memperbarui status: ${err?.message ?? "unknown"}` });
     }
   }
 
@@ -1404,7 +1360,8 @@ export default function ObservationHistoryPage() {
       try {
         const pdfBlob = doc.output("blob");
         const fileName = `${userId}/${baseFileName}`;
-        await supabase.storage.from("agrigrowthpdf").upload(fileName, pdfBlob, { contentType: "application/pdf", upsert: true });
+        const authClient = await getAuthSupabase();
+        await authClient.storage.from("agrigrowthpdf").upload(fileName, pdfBlob, { contentType: "application/pdf", upsert: true });
       } catch (err) {
         console.warn("Gagal upload ke supabase storage, tapi file sudah terunduh lokal:", err);
       }
@@ -1595,9 +1552,13 @@ export default function ObservationHistoryPage() {
                         e.stopPropagation();
                         confirmAction(`Hapus lahan "${tracker.title}"? Tindakan ini akan menghapus semua data terkait.`, async () => {
                           try {
-                            const resp = await fetch(`/api/observation/history?trackerId=${encodeURIComponent(tracker.id)}`, { method: 'DELETE', credentials: 'include' });
-                            const res = await resp.json();
-                            if (!resp.ok) throw new Error(res?.error || 'Gagal menghapus lahan');
+                            const resp = await fetch(`/api/observation/history?trackerId=${encodeURIComponent(tracker.id)}`, {
+                               method: 'DELETE',
+                               headers: await createAuthHeaders(session),
+                               credentials: 'include'
+                             });
+                             const res = await resp.json();
+                             if (!resp.ok) throw new Error(res?.error || 'Gagal menghapus lahan');
                             setTrackers((prev) => prev.filter((t) => t.id !== tracker.id));
                             // If deleting selected, clear selection
                             if (String(selectedTrackerId) === String(tracker.id)) setSelectedTrackerId(null);
@@ -1801,7 +1762,7 @@ export default function ObservationHistoryPage() {
                 <motion.div variants={fadeUpVariant} className="rounded-[20px] border-2 border-[#365a1a] bg-white p-6 shadow-sm">
                   <h2 className="mb-4 text-[20px] font-bold sm:text-[24px]">📝 Daftar Pengamatan (Edit / Hapus)</h2>
                   <div className="space-y-3">
-                    {logsRaw.map((log) => (
+                    {activeSampleLogs.map((log) => (
                       <div key={log.id} className="flex items-center justify-between rounded-md border p-3">
                         <div>
                           <div className="font-semibold text-[#365a1a]">Hari {log.day_number} — {log.plant_height} cm • {log.leaf_count} daun</div>
@@ -1824,32 +1785,134 @@ export default function ObservationHistoryPage() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {diseaseAnalysisLogs.map((item) => (
-                        <div key={item.id} className="rounded-xl border border-gray-200 bg-[#fafcf7] p-4">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                              <p className="text-sm font-semibold text-[#365a1a] uppercase tracking-wide">{item.status}</p>
-                              <p className="mt-1 text-lg font-bold text-gray-800">{item.diagnosis}</p>
-                              <p className="mt-1 text-sm text-gray-600">Tingkat keparahan: {item.severity || "-"}</p>
+                      {diseaseAnalysisLogs.map((item) => {
+                        const isExpanded = !!expandedDiseaseLogIds[item.id];
+                        const parseArray = (val: any): string[] => {
+                          if (!val) return [];
+                          if (Array.isArray(val)) return val;
+                          try {
+                            const parsed = JSON.parse(val);
+                            return Array.isArray(parsed) ? parsed : [];
+                          } catch {
+                            return [];
+                          }
+                        };
+                        const gejalaArr = parseArray(item.gejala);
+                        const solusiArr = parseArray(item.solusi);
+                        const pencegahanArr = parseArray(item.pencegahan);
+
+                        return (
+                          <div key={item.id} className="rounded-xl border border-gray-200 bg-[#fafcf7] p-4 shadow-sm">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold text-white uppercase ${
+                                    item.status === "Sehat" ? "bg-green-600" :
+                                    item.status === "Terdeteksi Penyakit" ? "bg-red-600" :
+                                    item.status === "Perlu Perhatian" ? "bg-yellow-600" : "bg-gray-600"
+                                  }`}>
+                                    {item.status}
+                                  </span>
+                                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                    item.urgency === "Segera" ? "bg-red-100 text-red-700 border border-red-200" :
+                                    item.urgency === "Dalam 1-2 Minggu" ? "bg-orange-100 text-orange-700 border border-orange-200" :
+                                    "bg-blue-100 text-blue-700 border border-blue-200"
+                                  }`}>
+                                    Urgensi: {item.urgency}
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-lg font-bold text-gray-800">{item.diagnosis}</p>
+                                <p className="mt-1 text-sm text-gray-600">Tingkat keparahan: <span className="font-semibold text-gray-800">{item.severity || "-"}</span></p>
+                              </div>
+                              <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2">
+                                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#365a1a] border border-[#365a1a]/20">
+                                  {item.plant_type}
+                                </span>
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                  <button
+                                    onClick={() => setEditingDiseaseLog(item)}
+                                    className="rounded bg-[#365a1a] hover:bg-[#2c4815] text-white px-3 py-1 text-xs font-semibold transition"
+                                  >
+                                    Edit Status
+                                  </button>
+                                  <button
+                                    onClick={() => toggleExpandDiseaseLog(item.id)}
+                                    className="rounded border border-gray-300 bg-white text-gray-700 px-3 py-1 text-xs font-semibold hover:bg-gray-50 transition"
+                                  >
+                                    {isExpanded ? "Tutup Detail" : "Lihat Detail"}
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                              <span className="rounded-full bg-[#365a1a] px-3 py-1 text-xs font-semibold text-white">{item.urgency}</span>
-                              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#365a1a] border border-[#365a1a]/20">
-                                {item.plant_type}
-                              </span>
-                            </div>
+
+                            {item.detected_as && (
+                              <p className="mt-3 text-sm text-orange-700">Terdeteksi sebagai: {item.detected_as}</p>
+                            )}
+
+                            {isExpanded && (
+                              <div className="mt-4 border-t border-gray-200 pt-4 space-y-4">
+                                {gejalaArr.length > 0 && (
+                                  <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                                    <h4 className="font-semibold text-[#365a1a] text-sm mb-2">Gejala yang Terdeteksi</h4>
+                                    <ul className="space-y-1.5">
+                                      {gejalaArr.map((g, i) => (
+                                        <li key={i} className="flex gap-2 text-sm text-gray-600">
+                                          <span className="text-gray-400 mt-0.5">•</span>{g}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {item.penyebab && item.status !== "Foto Tidak Valid" && (
+                                  <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                                    <h4 className="font-semibold text-[#365a1a] text-sm mb-1">Penyebab</h4>
+                                    <p className="text-sm text-gray-600">{item.penyebab}</p>
+                                  </div>
+                                )}
+
+                                {solusiArr.length > 0 && (
+                                  <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                                    <h4 className="font-semibold text-[#365a1a] text-sm mb-2">
+                                      {item.status === "Foto Tidak Valid" ? "Tips Upload Foto yang Benar" : "Langkah Penanganan"}
+                                    </h4>
+                                    <ol className="space-y-2">
+                                      {solusiArr.map((s, i) => (
+                                        <li key={i} className="flex gap-3 text-sm text-gray-600">
+                                          <span className="bg-[#365a1a] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                                          <span>{s}</span>
+                                        </li>
+                                      ))}
+                                    </ol>
+                                  </div>
+                                )}
+
+                                {pencegahanArr.length > 0 && (
+                                  <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                                    <h4 className="font-semibold text-[#365a1a] text-sm mb-2">Saran ke Depan (Pencegahan)</h4>
+                                    <ul className="space-y-1.5">
+                                      {pencegahanArr.map((p, i) => (
+                                        <li key={i} className="flex gap-2 text-sm text-gray-600">
+                                          <span className="text-green-500 mt-0.5">✓</span>{p}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {item.raw_text && (
+                                  <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                                    <h4 className="font-semibold text-gray-700 text-sm mb-1">Hasil Analisis Lengkap</h4>
+                                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{item.raw_text}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <p className="mt-3 text-xs text-gray-500">Disimpan: {item.created_at ? new Date(item.created_at).toLocaleString("id-ID") : "-"}</p>
                           </div>
-                          {item.detected_as && (
-                            <p className="mt-3 text-sm text-orange-700">Terdeteksi sebagai: {item.detected_as}</p>
-                          )}
-                          {item.raw_text && (
-                            <div className="mt-3 rounded-lg bg-white p-3 text-sm text-gray-600 border border-gray-100 whitespace-pre-wrap">
-                              {item.raw_text}
-                            </div>
-                          )}
-                          <p className="mt-3 text-xs text-gray-500">Disimpan: {item.created_at ? new Date(item.created_at).toLocaleString("id-ID") : "-"}</p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </motion.div>
@@ -1994,6 +2057,25 @@ export default function ObservationHistoryPage() {
                   <input type="text" name="fertilizer_type" value={editingLog.fertilizer_type} onChange={(e) => setEditingLog({...editingLog, fertilizer_type: e.target.value})} className="w-full rounded border px-3 py-2" />
                 </div>
                 <div>
+                  <label className="text-sm font-semibold">Kondisi Cahaya</label>
+                  <select name="light_condition" value={editingLog.light_condition || "Sangat Baik"} onChange={(e) => setEditingLog({...editingLog, light_condition: e.target.value})} className="w-full rounded border px-3 py-2 bg-white">
+                    <option value="Sangat Kurang">Sangat Kurang</option>
+                    <option value="Kurang">Kurang</option>
+                    <option value="Cukup">Cukup</option>
+                    <option value="Baik">Baik</option>
+                    <option value="Sangat Baik">Sangat Baik</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Kondisi Tanaman</label>
+                  <select name="plant_condition" value={editingLog.plant_condition || "Sehat"} onChange={(e) => setEditingLog({...editingLog, plant_condition: e.target.value})} className="w-full rounded border px-3 py-2 bg-white">
+                    <option value="Sehat">Sehat</option>
+                    <option value="Cukup Sehat">Cukup Sehat</option>
+                    <option value="Kurang Sehat">Kurang Sehat</option>
+                    <option value="Layu">Layu</option>
+                  </select>
+                </div>
+                <div>
                   <label className="text-sm font-semibold">Luas Lahan (ha)</label>
                   <input type="number" step="0.1" name="land_area" value={editingLog.land_area} onChange={(e) => setEditingLog({...editingLog, land_area: e.target.value})} className="w-full rounded border px-3 py-2" />
                 </div>
@@ -2002,6 +2084,68 @@ export default function ObservationHistoryPage() {
                 <button onClick={() => setEditingLog(null)} className="rounded border px-4 py-2">Batal</button>
                 <button onClick={() => handleUpdateLog(editingLog)} className="rounded bg-[#365a1a] px-4 py-2 text-white">Simpan</button>
               </div>
+            </div>
+          </div>
+        )}
+        {editingDiseaseLog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-xl rounded-[20px] bg-white p-6 shadow-xl">
+              <h3 className="text-lg font-bold text-[#365a1a] mb-4">Edit Status & Informasi Penyakit</h3>
+              <form onSubmit={handleUpdateDiseaseLog} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Diagnosis / Nama Penyakit</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={editingDiseaseLog.diagnosis}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Status Penyakit</label>
+                  <select
+                    value={editingDiseaseLog.status}
+                    onChange={(e) => setEditingDiseaseLog({ ...editingDiseaseLog, status: e.target.value })}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 bg-white"
+                  >
+                    <option value="Sehat">Sehat</option>
+                    <option value="Terdeteksi Penyakit">Terdeteksi Penyakit</option>
+                    <option value="Perlu Perhatian">Perlu Perhatian</option>
+                    <option value="Foto Tidak Valid">Foto Tidak Valid</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Tingkat Keparahan</label>
+                  <select
+                    value={editingDiseaseLog.severity || "-"}
+                    onChange={(e) => setEditingDiseaseLog({ ...editingDiseaseLog, severity: e.target.value })}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 bg-white"
+                  >
+                    <option value="-">-</option>
+                    <option value="Tidak Ada">Tidak Ada</option>
+                    <option value="Ringan">Ringan</option>
+                    <option value="Sedang">Sedang</option>
+                    <option value="Parah">Parah</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Urgensi Tindakan</label>
+                  <select
+                    value={editingDiseaseLog.urgency}
+                    onChange={(e) => setEditingDiseaseLog({ ...editingDiseaseLog, urgency: e.target.value })}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 bg-white"
+                  >
+                    <option value="Segera">Segera</option>
+                    <option value="Dalam 1-2 Minggu">Dalam 1-2 Minggu</option>
+                    <option value="Pantau Saja">Pantau Saja</option>
+                    <option value="Tidak Perlu Tindakan">Tidak Perlu Tindakan</option>
+                  </select>
+                </div>
+                <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+                  <button type="button" onClick={() => setEditingDiseaseLog(null)} className="rounded-full border border-gray-300 px-5 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 transition">Batal</button>
+                  <button type="submit" className="rounded-full bg-[#365a1a] hover:bg-[#2c4815] px-5 py-2 text-sm font-bold text-white transition">Simpan Perubahan</button>
+                </div>
+              </form>
             </div>
           </div>
         )}
