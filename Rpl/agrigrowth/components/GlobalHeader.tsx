@@ -24,11 +24,11 @@ export default function GlobalHeader({ variant = "light" }: GlobalHeaderProps) {
   const navTextBase = isDark ? "text-white/90" : "text-[#365a1a]";
   const navTextHover = isDark ? "hover:text-white" : "hover:opacity-80";
   const navLinks = [
-    { href: "/", label: "Home" },
-    { href: "/about", label: "About" },
-    { href: "/growth-tracker", label: "Growth Tracker" },
-    { href: "/weather", label: "Weather" },
-    { href: "/history", label: "History" },
+    { href: "/", label: "Beranda" },
+    { href: "/about", label: "Tentang Kami" },
+    { href: "/growth-tracker", label: "Pelacak Pertumbuhan" },
+    { href: "/weather", label: "Cuaca" },
+    { href: "/history", label: "Riwayat" },
     { href: "/analisis-penyakit", label: "Analisis Penyakit" },
   ];
 
@@ -74,18 +74,18 @@ export default function GlobalHeader({ variant = "light" }: GlobalHeaderProps) {
               <>
                 <SignInButton mode="modal">
                   <button className={`text-sm font-semibold transition ${isDark ? 'text-white/85 hover:text-white' : 'text-[#365a1a] hover:opacity-80'}`}>
-                    Sign In
+                    Masuk
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
                   {isDark ? (
                     <button className="inline-flex items-center gap-3 rounded-full bg-[#365a1a] px-4 py-2 shadow-lg hover:bg-[#2d4915] transition text-white">
-                      <span className="text-lg font-medium">Sign Up</span>
+                      <span className="text-lg font-medium">Daftar</span>
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f3b300] font-bold text-black">›</span>
                     </button>
                   ) : (
                     <button className="rounded-full bg-[#365a1a] px-5 py-2 text-[16px] font-medium text-white shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition hover:bg-[#2d4915] sm:text-[18px]">
-                      Login / Sign Up
+                      Masuk / Daftar
                     </button>
                   )}
                 </SignUpButton>
@@ -128,10 +128,10 @@ export default function GlobalHeader({ variant = "light" }: GlobalHeaderProps) {
               {isLoaded && !isSignedIn && (
                 <div className="flex flex-col gap-3">
                   <SignInButton mode="modal">
-                    <button className={`text-left text-sm font-semibold ${isDark ? 'text-white/90' : 'text-[#365a1a]'}`}>Sign In</button>
+                    <button className={`text-left text-sm font-semibold ${isDark ? 'text-white/90' : 'text-[#365a1a]'}`}>Masuk</button>
                   </SignInButton>
                   <SignUpButton mode="modal">
-                    <button className="rounded-md bg-[#365a1a] px-4 py-2.5 text-white font-medium text-center w-full shadow-md">Sign Up</button>
+                    <button className="rounded-md bg-[#365a1a] px-4 py-2.5 text-white font-medium text-center w-full shadow-md">Daftar</button>
                   </SignUpButton>
                 </div>
               )}
