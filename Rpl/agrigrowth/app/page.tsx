@@ -21,8 +21,8 @@ const staggerContainer: Variants = {
 // Varian animasi Framer Motion untuk efek memudar dan bergeser ke atas (fade up)
 const fadeUpVariant: Variants = {
   hidden: { opacity: 0, y: 30 }, // Kondisi awal: tidak terlihat dan bergeser ke bawah 30px
-  show: { 
-    opacity: 1, 
+  show: {
+    opacity: 1,
     y: 0, // Kondisi akhir: terlihat sepenuhnya dan berada di posisi aslinya
     transition: { type: "spring", stiffness: 70, damping: 15 } as const // Efek pegas (spring) yang halus
   }
@@ -35,13 +35,13 @@ const heroBackground =
 export default function Home() {
   // Mengambil status apakah user sudah login atau belum dari Clerk
   const { isSignedIn } = useAuth();
-  
+
   // Fungsi dari Clerk untuk membuka modal pop-up sign in secara programatis
   const { openSignIn } = useClerk();
-  
+
   // Instance router untuk navigasi halaman
   const router = useRouter();
-  
+
   // Mengambil data user yang sedang login beserta status loading dari hook kustom
   const { user, isLoading } = useUser();
 
@@ -79,15 +79,15 @@ export default function Home() {
 
       {/* Komponen Header navigasi bagian atas */}
       <HeaderWithModal
-        onSignUpClick={() => {}}
-        onSignInClick={() => {}}
+        onSignUpClick={() => { }}
+        onSignInClick={() => { }}
       />
 
       {/* Kontainer konten utama dengan pembatasan lebar maksimal */}
       <div className="relative mx-auto flex w-full max-w-[1440px] flex-col px-5 pb-10 sm:px-10 lg:px-14 lg:pt-8">
 
         {/* Section beranimasi menggunakan Framer Motion */}
-        <motion.section 
+        <motion.section
           variants={staggerContainer}
           initial="hidden"
           animate="show"
@@ -95,16 +95,16 @@ export default function Home() {
         >
           {/* Judul utama dengan efek animasi fade up */}
           <motion.h1 variants={fadeUpVariant} className="text-5xl font-extrabold leading-tight tracking-tight text-white sm:text-6xl lg:text-7xl">
-            Simplifying Agricultural
+            Memudahkan Analisis
             <br />
-            Analysis Through Digital
+            Pertanian Melalui Teknologi
             <br />
-            Technology.
+            Digital.
           </motion.h1>
 
           {/* Deskripsi singkat mengenai platform AgriGrowth */}
           <motion.p variants={fadeUpVariant} className="mt-6 max-w-[840px] text-lg leading-relaxed text-white/90 sm:text-xl lg:text-2xl">
-            A digital platform that helps researcher and students record, monitor, and analyze crop data in one place. From growth tracking and cost management to harvest predictions and insights, everything is designed to support smarter and more efficient agricultural decisions.
+            Sebuah platform digital yang membantu peneliti dan mahasiswa mencatat, memantau, dan menganalisis data tanaman di satu tempat. Mulai dari pemantauan pertumbuhan dan pengelolaan biaya hingga prediksi panen serta wawasan lainnya, semua dirancang untuk mendukung keputusan pertanian yang lebih cerdas dan efisien.
           </motion.p>
 
           {/* Tombol aksi utama untuk memulai penggunaan aplikasi */}
@@ -114,7 +114,7 @@ export default function Home() {
             className="mt-10 inline-flex items-center gap-3 rounded-full bg-white/75 px-6 py-3 text-base font-semibold text-black shadow-[-2px_2px_4px_rgba(0,0,0,0.25)] transition duration-200 hover:bg-white/90 sm:gap-4 sm:px-8 sm:py-4 sm:text-lg"
             type="button"
           >
-            <span>Get Started</span>
+            <span>Mulai Sekarang</span>
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3b300] font-bold text-[#1a1a1a] sm:h-11 sm:w-11">
               {/* Ikon panah penunjuk jalan */}
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
