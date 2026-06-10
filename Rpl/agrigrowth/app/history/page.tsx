@@ -1,5 +1,6 @@
 "use client";
 
+// Import library, hooks kustom, ikon Lucide, dan komponen header global
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { motion, Variants } from "framer-motion";
@@ -11,10 +12,13 @@ import { Trash2 } from "lucide-react";
 import GlobalHeader from "@/components/GlobalHeader";
 import { useSession } from "@clerk/nextjs";
 
+// Fungsi pembantu untuk membuat header otorisasi API menggunakan token dari Clerk session
 async function createAuthHeaders(session: ReturnType<typeof useSession>["session"]) {
   const token = await session?.getToken().catch(() => null);
   return token ? { Authorization: `Bearer ${token}` } : undefined;
 }
+
+// Varian animasi Framer Motion untuk transisi transisi masuk
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -28,6 +32,7 @@ const fadeUpVariant: Variants = {
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 70, damping: 15 } as const }
 };
 
+// Aset Gambar Latar Belakang Kartu Dan Default Komoditas
 const imgRice2 = "/padi.png";
 const imgDownload41 = "/jagung.png";
 const imgPadiPraktikum = "/bawang.png";
@@ -35,13 +40,16 @@ const imgHistoryImage = "https://images.unsplash.com/photo-1464226184884-fa280b8
 const imgLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
 const imgProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 
+// Map ilustrasi gambar berdasarkan jenis tanaman
 const plantImages: { [key: string]: string } = {
   padi: imgRice2,
   jagung: imgDownload41,
   bawang: imgPadiPraktikum,
 };
 
+// Komponen utama halaman Riwayat Pengamatan (History)
 export default function History() {
+  // State management untuk menyimpan tracker, status loading, dan Clerk user
   const { user, isLoading } = useUser();
   const [trackers, setTrackers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +59,7 @@ export default function History() {
   const userId = user?.id;
   const { session } = useSession();
 
+  // Effect untuk memuat riwayat tracker lahan milik user dari API
   useEffect(() => {
     if (isLoading || !userId) {
       if (!isLoading) setLoading(false);
@@ -77,6 +86,7 @@ export default function History() {
     fetchTrackers();
   }, [userId, isLoading]);
 
+  // Fungsi pembantu untuk memformat nama label tanaman
   const getPlantLabel = (plantType: string) => {
     switch (plantType) {
       case "jagung":
@@ -88,10 +98,12 @@ export default function History() {
     }
   };
 
+  // Fungsi pembantu untuk mencocokkan gambar ilustrasi tanaman
   const getPlantImage = (plantType: string) => {
     return plantImages[plantType] || imgRice2;
   };
 
+  // Handler kustom untuk menampilkan pop-up konfirmasi toast sebelum menghapus
   const confirmAction = (message: string, onConfirm: () => void) => {
     toast((t) => (
       <div className="flex flex-col gap-3">
@@ -117,6 +129,7 @@ export default function History() {
     ), { duration: Infinity, id: `confirm-${Date.now()}` });
   };
 
+  // Handler untuk memicu penghapusan data tracker beserta relasinya via API
   const handleDeleteTracker = (trackerId: string) => {
     confirmAction("Apakah Anda yakin ingin menghapus tracker ini? Data yang terhubung juga akan ikut terhapus.", async () => {
       setDeleting(trackerId);
@@ -129,7 +142,7 @@ export default function History() {
         const result = await response.json();
         if (!response.ok) throw new Error(result?.error || "Gagal menghapus tracker");
 
-        // Update UI by removing the deleted tracker
+        // Perbarui UI dengan menyaring tracker yang telah terhapus
         setTrackers((prev) => prev.filter(t => t.id !== trackerId));
         toast.success("Tracker berhasil dihapus", { id: "Tracker berhasil dihapus" });
       } catch (error) {
@@ -142,18 +155,19 @@ export default function History() {
   };
 
   return (
+    // Return JSX untuk merender UI Halaman Riwayat Pengamatan (History)
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       {/* Header */}
       <GlobalHeader variant="light" />
 
-      {/* Content */}
+      {/* Konten Utama */}
       <motion.section 
         variants={staggerContainer}
         initial="hidden"
         animate="show"
         className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 sm:gap-8 px-4 sm:px-5 pb-10 sm:pb-12 pt-4 sm:pt-6 md:px-10 lg:px-14 lg:pt-8"
       >
-        {/* Hero Section */}
+        {/* Banner Hero Riwayat */}
         <motion.article variants={fadeUpVariant} className="rounded-[20px] sm:rounded-[30px] bg-white p-4 sm:p-5 md:p-6 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.2),-6px_6px_15px_0px_rgba(0,0,0,0.2)]">
           <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-center md:gap-8">
             <div className="h-[150px] sm:h-[190px] w-full overflow-hidden rounded-[16px] sm:rounded-[20px] md:h-[273px] md:max-w-[605px]">
@@ -171,7 +185,7 @@ export default function History() {
           </div>
         </motion.article>
 
-        {/* History Cards or Empty State */}
+        {/* Panel Riwayat Lahan Pengguna (Menampilkan daftar kartu atau pesan kosong) */}
         <motion.div variants={fadeUpVariant} className="rounded-[20px] sm:rounded-[30px] bg-white p-4 sm:p-6 md:p-8 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.2),-6px_6px_15px_0px_rgba(0,0,0,0.2)]">
           <h2 className="text-[24px] sm:text-[32px] font-bold md:text-[40px]">Ringkasan Lahan Anda</h2>
 
@@ -197,7 +211,7 @@ export default function History() {
                   key={tracker.id}
                   className="flex flex-col gap-4 sm:gap-5 rounded-[20px] sm:rounded-[25px] border-2 border-[#365a1a] p-4 sm:p-5 md:flex-row md:items-center md:gap-6 lg:p-6"
                 >
-                  {/* Image */}
+                  {/* Gambar Mini Ilustrasi Tanaman Lahan */}
                   <div className="h-[120px] sm:h-[150px] w-full overflow-hidden rounded-[16px] sm:rounded-[20px] md:h-[180px] md:w-[240px] md:flex-shrink-0">
                     <img
                       alt={tracker.title}
@@ -207,7 +221,7 @@ export default function History() {
                     />
                   </div>
 
-                  {/* Info */}
+                  {/* Informasi Detail Lahan */}
                   <div className="flex-1">
                     <h3 className="text-[20px] sm:text-[24px] font-bold text-[#365a1a] md:text-[28px]">
                       {tracker.title}
@@ -229,6 +243,7 @@ export default function History() {
                       </div>
                     </div>
 
+                    {/* Tombol pintas navigasi detail and tombol hapus */}
                     <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
                       <p className="text-[12px] sm:text-[14px] font-semibold text-[#365a1a]">
                         ID: <span className="font-mono text-[11px] sm:text-[12px]">{tracker.id.substring(0, 8)}...</span>

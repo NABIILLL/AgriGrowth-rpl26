@@ -1,5 +1,6 @@
 "use client";
 
+// Import library, ikon Lucide React, hook pemantau cuaca, dan komponen header global
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
@@ -20,6 +21,7 @@ import { getWeatherDescription } from "@/lib/weather";
 import GlobalHeader from "@/components/GlobalHeader";
 import { motion, Variants } from "framer-motion";
 
+// Varian animasi transisi menggunakan Framer Motion
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -39,18 +41,21 @@ const fadeUpVariant: Variants = {
   }
 };
 
+// URL Aset Gambar & Icon Default
 const imgRainHero = "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?q=80&w=2000&auto=format&fit=crop";
 const imgBrandLogo = "/logo%202.png";
 const imgProfileAvatar = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 const imgCloudyIcon = "https://api.iconify.design/lucide:cloud.svg?color=%23365a1a";
 const imgRainIcon = "https://api.iconify.design/lucide:cloud-rain.svg?color=%23365a1a";
 
+// Titik koordinat default (Bogor, Jawa Barat)
 const DEFAULT_LAT = -6.5951;
 const DEFAULT_LON = 106.8063;
 const DEFAULT_LOCATION = "Bogor, Jawa Barat";
 
 const navLinkClass = "hover:opacity-80 transition";
 
+// Fungsi pembantu untuk mencocokkan kode cuaca WMO dengan asset gambar icon
 function getWeatherIconSrc(code: number) {
   if (code === 0) return imgCloudyIcon;
   if (code === 1 || code === 2 || code === 3 || code === 45 || code === 48) return imgCloudyIcon;
@@ -58,10 +63,12 @@ function getWeatherIconSrc(code: number) {
   return imgCloudyIcon;
 }
 
+// Sub-komponen pembantu untuk merender icon cuaca berdasarkan kodenya
 function WeatherGlyph({ code, className }: { code: number; className?: string }) {
   return <img alt="" src={getWeatherIconSrc(code)} className={className} />;
 }
 
+// Fungsi pembantu untuk memformat teks jam
 function formatHourLabel(timeValue: string) {
   const hourPart = Number(timeValue.slice(11, 13));
   const suffix = hourPart >= 12 ? "PM" : "AM";
@@ -69,6 +76,7 @@ function formatHourLabel(timeValue: string) {
   return `${normalizedHour} ${suffix}`;
 }
 
+// Fungsi pembantu untuk mengambil data waktu jam terkini berdasarkan timezone lokal
 function getCurrentHourKey(timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -87,6 +95,7 @@ function getCurrentHourKey(timeZone: string) {
   return `${year}-${month}-${day}T${hour}:00`;
 }
 
+// Fungsi pembantu untuk memetakan warna aksen latar belakang kartu cuaca
 function getWeatherAccent(code: number) {
   if (code === 0) return "from-amber-100 to-yellow-50";
   if (code === 1 || code === 2) return "from-lime-50 to-emerald-50";
@@ -98,7 +107,9 @@ function getWeatherAccent(code: number) {
   return "from-emerald-50 to-lime-50";
 }
 
+// Komponen utama halaman Informasi Cuaca (WeatherInfo)
 export default function WeatherInfo() {
+  // State management untuk menyimpan latitude, longitude, nama lokasi pencarian, status pencarian, dan error gambar
   const [latitude, setLatitude] = useState(DEFAULT_LAT);
   const [longitude, setLongitude] = useState(DEFAULT_LON);
   const [locationName, setLocationName] = useState(DEFAULT_LOCATION);
@@ -107,16 +118,19 @@ export default function WeatherInfo() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [heroImageFailed, setHeroImageFailed] = useState(false);
 
+  // Menggunakan custom hook useWeather untuk memuat data cuaca dari Open-Meteo API secara dinamis
   const { current, forecast, hourly, loading, error, refetch } = useWeather({
     latitude,
     longitude,
     locationName,
   });
 
+  // Sinkronisasi teks pencarian ketika nama lokasi berubah
   useEffect(() => {
     setSearchQuery(locationName);
   }, [locationName]);
 
+  // useMemo memetakan data prediksi cuaca per jam secara berkala untuk 7 jam ke depan
   const hourlyItems = useMemo(() => {
     if (!hourly?.time?.length) return [];
 
@@ -142,6 +156,7 @@ export default function WeatherInfo() {
     ? `${current.condition}. ${current.temperature}°C`
     : "Memuat cuaca...";
 
+  // Handler untuk mendeteksi posisi koordinat pengguna melalui Geolocation API bawaan browser
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
       alert("Browser Anda tidak mendukung Geolocation");
@@ -154,6 +169,7 @@ export default function WeatherInfo() {
         setLatitude(lat);
         setLongitude(lon);
 
+        // Geocoding terbalik (Reverse Geocoding) menggunakan Nominatim OpenStreetMap API untuk mengambil nama kotanya
         (async () => {
           try {
             const response = await fetch(
@@ -187,6 +203,7 @@ export default function WeatherInfo() {
     );
   };
 
+  // Handler untuk memicu pencarian geolokasi nama kota berdasarkan input pencarian user (menggunakan Nominatim search)
   const handleSearchLocation = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const query = searchQuery.trim();
@@ -228,15 +245,18 @@ export default function WeatherInfo() {
   };
 
   return (
+    // Return JSX UI untuk halaman pemantau cuaca
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       <GlobalHeader variant="light" />
 
+      {/* Konten Utama */}
       <motion.section 
         variants={staggerContainer}
         initial="hidden"
         animate="show"
         className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-5 pb-12 pt-6 sm:px-10 lg:px-14 lg:pt-8"
       >
+        {/* Banner Grid: Kiri (Suhu & Kondisi), Kanan (Ilustrasi Cuaca Aktif) */}
         <motion.article variants={fadeUpVariant} className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-[383px_1fr] lg:items-stretch">
           <div className="rounded-[50px] border-[3px] border-[rgba(54,90,26,0.75)] bg-white px-6 py-7 shadow-[0_20px_55px_rgba(54,90,26,0.12)] sm:px-8 sm:py-8">
             <div className="flex h-full flex-col items-center justify-center text-center">
@@ -299,6 +319,7 @@ export default function WeatherInfo() {
           </div>
         </motion.article>
 
+        {/* Formulir Pencarian Lokasi & Tombol Deteksi Lokasi */}
         <motion.form variants={fadeUpVariant} onSubmit={handleSearchLocation} className="grid gap-3 grid-cols-1 sm:grid-cols-[1fr_auto] lg:grid-cols-[1fr_auto_auto]">
           <div className="flex items-center gap-3 rounded-full border-2 border-[rgba(54,90,26,0.25)] bg-white px-5 py-3 shadow-sm">
             <Search className="h-5 w-5 shrink-0 text-[#365a1a]/70" strokeWidth={2} />
@@ -329,12 +350,14 @@ export default function WeatherInfo() {
           </button>
         </motion.form>
 
+        {/* Banner Pesan Kesalahan Pencarian */}
         {searchError ? (
           <motion.div variants={fadeUpVariant} className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {searchError}
           </motion.div>
         ) : null}
 
+        {/* Badge Banner Lokasi Aktif Terpilih */}
         <motion.div variants={fadeUpVariant} className="rounded-[50px] bg-[#365a1a] px-6 py-5 text-center text-[16px] font-semibold text-[#d7e4cd] shadow-[0_16px_40px_rgba(54,90,26,0.16)] sm:text-[18px]">
           <div className="flex items-center justify-center gap-2">
             <MapPin className="h-5 w-5 shrink-0" strokeWidth={2.1} />
@@ -342,6 +365,7 @@ export default function WeatherInfo() {
           </div>
         </motion.div>
 
+        {/* Panel Prediksi Cuaca per Jam */}
         <motion.section variants={fadeUpVariant} className="rounded-[50px] border-[3px] border-[rgba(54,90,26,0.75)] bg-white p-5 shadow-[0_20px_55px_rgba(54,90,26,0.12)] sm:p-7">
           <div className="flex flex-col gap-3 border-b border-[#dfe8d2] pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -395,6 +419,7 @@ export default function WeatherInfo() {
           )}
         </motion.section>
 
+        {/* Panel Indikator Parameter Udara & Lingkungan Sekitar */}
         <motion.section variants={fadeUpVariant} className="grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           <div className="rounded-[28px] border-2 border-[#365a1a] bg-white p-4 sm:p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <div className="flex items-center gap-2 sm:gap-3 text-[#365a1a]/70">
@@ -432,6 +457,7 @@ export default function WeatherInfo() {
           </div>
         </motion.section>
 
+        {/* Panel Prakiraan Cuaca 7 Hari Ke Depan */}
         {!loading && forecast.length > 0 ? (
           <motion.section variants={fadeUpVariant} className="rounded-[40px] bg-white p-5 shadow-[0_20px_55px_rgba(54,90,26,0.12)] sm:p-7">
             <div className="flex items-center justify-between gap-4">
@@ -464,6 +490,7 @@ export default function WeatherInfo() {
         ) : null}
       </motion.section>
 
+      {/* Animasi mengapung untuk visual efek */}
       <style jsx global>{`
         @keyframes weather-float {
           0%,

@@ -1,8 +1,10 @@
 "use client";
 
+// Import library dan fungsi utilitas API admin yang dibutuhkan
 import { useEffect, useMemo, useState } from "react";
 import { adminFetch } from "@/app/admin/_lib/adminApi";
 
+// Definisi tipe data untuk data profil pengguna
 type Profile = {
   id: string;
   name: string | null;
@@ -14,6 +16,7 @@ type Profile = {
   updated_at?: string | null;
 };
 
+// State awal untuk formulir profil baru/edit
 const emptyForm = {
   id: "",
   name: "",
@@ -23,19 +26,23 @@ const emptyForm = {
   bio: "",
 };
 
+// Komponen utama halaman Kelola Profil Pengguna (Admin)
 export default function AdminProfilesPage() {
+  // State management untuk menyimpan daftar profil, loading, error, formulir, dan ID profil yang sedang diedit
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // useMemo untuk menghitung statistik jumlah profil secara efisien
   const stats = useMemo(() => {
     return {
       total: profiles.length,
     };
   }, [profiles]);
 
+  // Fungsi untuk mengambil daftar profil pengguna dari API admin
   const loadProfiles = async () => {
     setLoading(true);
     setError(null);
@@ -50,6 +57,7 @@ export default function AdminProfilesPage() {
     }
   };
 
+  // Memuat data saat pertama kali halaman di-render
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -59,11 +67,13 @@ export default function AdminProfilesPage() {
     return () => { mounted = false; };
   }, []);
 
+  // Handler untuk mengosongkan formulir dan mereset status edit
   const resetForm = () => {
     setForm({ ...emptyForm });
     setEditingId(null);
   };
 
+  // Handler untuk menyimpan data profil baru atau memperbarui data profil yang ada (PATCH/POST)
   const handleSubmit = async () => {
     if (!form.id || !form.name) {
       setError("ID dan nama wajib diisi");
@@ -106,6 +116,7 @@ export default function AdminProfilesPage() {
     }
   };
 
+  // Handler untuk memuat data profil terpilih ke formulir agar dapat diedit
   const handleEdit = (profile: Profile) => {
     setEditingId(profile.id);
     setForm({
@@ -118,6 +129,7 @@ export default function AdminProfilesPage() {
     });
   };
 
+  // Handler untuk menghapus data profil pengguna berdasarkan ID
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus profile ini?")) return;
     setError(null);
@@ -131,7 +143,9 @@ export default function AdminProfilesPage() {
   };
 
   return (
+    // Return JSX untuk merender UI Kelola Profiles
     <>
+      {/* Header Halaman dan Tombol Aksi Utama */}
       <div className="page-header">
         <div>
           <div className="page-title">Kelola Profiles</div>
@@ -143,13 +157,16 @@ export default function AdminProfilesPage() {
         </div>
       </div>
 
+      {/* Tampilan pesan kesalahan jika ada */}
       {error && (
         <div className="panel" style={{ marginBottom: 14 }}>
           <div style={{ padding: "12px 16px", color: "var(--red)" }}>{error}</div>
         </div>
       )}
 
+      {/* Grid Kiri (Ringkasan Statistik) dan Kanan (Form Input Profil) */}
       <div className="grid-equal" style={{ marginBottom: 14 }}>
+        {/* Panel Ringkasan */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-id"></i> Ringkasan</div>
@@ -158,6 +175,7 @@ export default function AdminProfilesPage() {
             <div className="stat-cell"><div className="stat-cell-num">{stats.total}</div><div className="stat-cell-lbl">Total</div></div>
           </div>
         </div>
+        {/* Panel Formulir Input/Edit Profil */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-edit"></i> Form Profile</div>
@@ -173,6 +191,7 @@ export default function AdminProfilesPage() {
         </div>
       </div>
 
+      {/* Tabel Daftar Profiles */}
       <div className="panel">
         <div className="panel-header">
           <div className="panel-title"><i className="ti ti-list"></i> Daftar Profiles</div>

@@ -1,13 +1,19 @@
 "use client";
 
+// Import library yang dibutuhkan
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
+// Komponen Callback Autentikasi setelah login/signup melalui pihak ketiga (Supabase Auth/Google)
 export default function AuthCallback() {
+  // Hook untuk navigasi Next.js
   const router = useRouter();
+  
+  // State untuk menyimpan pesan error autentikasi
   const [error, setError] = useState<string | null>(null);
 
+  // Effect untuk menangani callback autentikasi PKCE dari Supabase Auth
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
@@ -72,6 +78,7 @@ export default function AuthCallback() {
   }, [router]);
 
   return (
+    // Tampilan UI sederhana saat loading atau terjadi error redirect
     <div className="flex min-h-screen items-center justify-center bg-white">
       <div className="text-center">
         {error ? (

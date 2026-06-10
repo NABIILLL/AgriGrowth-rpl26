@@ -30,9 +30,19 @@ const toNumber = (value: unknown) => {
 
 async function recalculateAggregatedLogServer(trackerId: string, dayNumber: number) {
   const supabase = getSupabaseService();
+  
+  // Ambil land_area langsung dari tabel trackers
+  const { data: trackerRow } = await supabase
+    .from("trackers")
+    .select("land_area")
+    .eq("id", trackerId)
+    .maybeSingle();
+
+  const landArea = trackerRow?.land_area ? Number(trackerRow.land_area) : 1;
+
   const { data: sampleRows, error: sampleRowsError } = await supabase
     .from("growth_sample_logs")
-    .select("plant_height, leaf_count, branch_count, soil_ph, light_condition, plant_condition, fertilizer_type, land_area")
+    .select("plant_height, leaf_count, branch_count, soil_ph, light_condition, plant_condition, fertilizer_type")
     .eq("tracker_id", trackerId)
     .eq("day_number", dayNumber);
 
@@ -61,7 +71,7 @@ async function recalculateAggregatedLogServer(trackerId: string, dayNumber: numb
     light_condition: sampleRows[0]?.light_condition || "Sangat Baik",
     plant_condition: sampleRows[0]?.plant_condition || "Sehat",
     fertilizer_type: sampleRows[0]?.fertilizer_type || "NPK",
-    land_area: Number(avg(sampleRows.map((item) => Number(item.land_area))).toFixed(2)),
+    land_area: landArea,
   };
 
   const { data: existingGrowth, error: existingGrowthError } = await supabase
@@ -159,22 +169,24 @@ export async function POST(request: Request) {
       const lightCondition = typeof payload?.lightCondition === "string" ? payload.lightCondition.trim() : "";
       const plantCondition = typeof payload?.plantCondition === "string" ? payload.plantCondition.trim() : "";
       const fertilizerType = typeof payload?.fertilizerType === "string" ? payload.fertilizerType.trim() : "";
-      const landArea = Number(payload?.landArea);
+      const landAreaFromPayload = toNumber(payload?.landArea);
 
-      if (!trackerId || !sampleId || !dayNumber || Number.isNaN(plantHeight) || Number.isNaN(leafCount) || Number.isNaN(soilPh) || !lightCondition || !plantCondition || !fertilizerType || Number.isNaN(landArea)) {
+      if (!trackerId || !sampleId || !dayNumber || Number.isNaN(plantHeight) || Number.isNaN(leafCount) || Number.isNaN(soilPh) || !lightCondition || !plantCondition || !fertilizerType) {
         return NextResponse.json({ error: "Missing or invalid required fields" }, { status: 400 });
       }
 
       const supabase = getSupabaseService();
       const { data: trackerRow, error: trackerError } = await supabase
         .from("trackers")
-        .select("id, user_id")
+        .select("id, user_id, land_area")
         .eq("id", trackerId)
         .maybeSingle();
 
       if (trackerError) return NextResponse.json({ error: trackerError.message }, { status: 500 });
       if (!trackerRow) return NextResponse.json({ error: "Tracker not found" }, { status: 404 });
       if (trackerRow.user_id !== user.id) return NextResponse.json({ error: "Not authorized to modify this tracker" }, { status: 403 });
+
+      const landArea = landAreaFromPayload !== null && !Number.isNaN(landAreaFromPayload) ? landAreaFromPayload : (trackerRow.land_area ? Number(trackerRow.land_area) : 1);
 
       const { error: sampleInsertError } = await supabase.from("growth_sample_logs").insert({
         id: crypto.randomUUID(),
@@ -217,12 +229,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "At least one sample is required" }, { status: 400 });
     }
 
+    const variety = typeof payload?.variety === "string" ? payload.variety.trim() : null;
+    const plantingDate = typeof payload?.planting_date === "string" ? payload.planting_date.trim() : null;
+    const spacingCm = toNumber(payload?.spacing_cm);
+    const plantPerArea = toNumber(payload?.plant_per_area);
+    const landUnit = typeof payload?.land_unit === "string" ? payload.land_unit.trim() : null;
+    const landArea = toNumber(payload?.land_area);
+
     const samples: SamplePayload[] = rawSamples.slice(0, sampleCount).map((sample: any, idx: number) => {
       const plantHeight = toNumber(sample?.plant_height);
       const leafCount = Number.parseInt(String(sample?.leaf_count), 10);
       const branchCount = Number.parseInt(String(sample?.branch_count ?? "0"), 10);
       const soilPh = toNumber(sample?.soil_ph);
-      const landArea = toNumber(sample?.land_area);
+      const sampleLandArea = sample?.land_area !== undefined && sample.land_area !== null ? toNumber(sample.land_area) : landArea;
       const lightCondition = typeof sample?.light_condition === "string" ? sample.light_condition.trim() : "";
       const plantCondition = typeof sample?.plant_condition === "string" ? sample.plant_condition.trim() : "";
       const fertilizerType = typeof sample?.fertilizer_type === "string" ? sample.fertilizer_type.trim() : "";
@@ -237,8 +256,8 @@ export async function POST(request: Request) {
         soilPh === null ||
         soilPh < 0 ||
         soilPh > 14 ||
-        landArea === null ||
-        landArea <= 0 ||
+        sampleLandArea === null ||
+        sampleLandArea <= 0 ||
         !lightCondition ||
         !plantCondition ||
         !fertilizerType
@@ -255,7 +274,7 @@ export async function POST(request: Request) {
         light_condition: lightCondition,
         plant_condition: plantCondition,
         fertilizer_type: fertilizerType,
-        land_area: landArea,
+        land_area: sampleLandArea,
       };
     });
 
@@ -269,15 +288,25 @@ export async function POST(request: Request) {
       light_condition: samples[0].light_condition,
       plant_condition: samples[0].plant_condition,
       fertilizer_type: samples[0].fertilizer_type,
-      land_area: Number(avg(samples.map((item) => item.land_area)).toFixed(2)),
+      land_area: landArea !== null ? landArea : Number(avg(samples.map((item) => item.land_area)).toFixed(2)),
     };
 
     const supabase = getSupabaseService();
 
     const trackerRes = await supabase
       .from("trackers")
-      .insert({ user_id: user.id, title, plant_type: plantType })
-      .select("id, title, plant_type, user_id, created_at")
+      .insert({
+        user_id: user.id,
+        title,
+        plant_type: plantType,
+        variety,
+        planting_date: plantingDate,
+        spacing_cm: spacingCm,
+        plant_per_area: plantPerArea,
+        land_unit: landUnit,
+        land_area: landArea,
+      })
+      .select("id, title, plant_type, user_id, created_at, variety, planting_date, spacing_cm, plant_per_area, land_unit, land_area")
       .single();
 
     if (trackerRes.error || !trackerRes.data) {
@@ -366,7 +395,7 @@ export async function GET(request: Request) {
 
     const trackerQuery = supabase
       .from("trackers")
-      .select("id, title, plant_type, user_id, created_at")
+      .select("id, title, plant_type, user_id, created_at, variety, planting_date, spacing_cm, plant_per_area, land_unit, land_area")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 

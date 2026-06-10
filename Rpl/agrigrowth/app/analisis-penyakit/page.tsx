@@ -1,5 +1,6 @@
 "use client";
 
+// Import library dan komponen yang dibutuhkan
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,8 +10,10 @@ import { toast } from "react-hot-toast";
 import { useUser } from "@/hooks/useUser";
 import { useSession } from "@clerk/nextjs";
 
+// Tipe data untuk jenis tanaman yang didukung
 type JenisTanaman = "Padi" | "Jagung" | "Bawang Merah";
 
+// Tipe data untuk opsi tracker lahan
 type TrackerOption = {
   id: string;
   title: string;
@@ -18,6 +21,7 @@ type TrackerOption = {
   created_at?: string | null;
 };
 
+// Tipe data untuk hasil analisis penyakit oleh AI
 type HasilAnalisis = {
   status: string;
   detectedAs?: string; // ✅ apa yang terdeteksi kalau foto tidak valid
@@ -31,6 +35,7 @@ type HasilAnalisis = {
   rawText?: string;
 };
 
+// Konfigurasi opsi tanaman beserta gambar dan deskripsinya
 const TANAMAN_OPTIONS: { value: JenisTanaman; slug: string; desc: string; image: string }[] = [
   {
     value: "Padi",
@@ -86,14 +91,19 @@ const getPlantSlug = (value: JenisTanaman | null) => {
 
 const imgLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
 
+// Fungsi pembantu untuk membuat header otorisasi API menggunakan token dari Clerk session
 async function createAuthHeaders(session: ReturnType<typeof useSession>["session"]) {
   const token = await session?.getToken().catch(() => null);
   return token ? { Authorization: `Bearer ${token}` } : undefined;
 }
 
+// Komponen utama halaman Analisis Penyakit Tanaman
 export default function AnalisisPenyakitPage() {
+  // Hooks kustom dan Clerk session
   const { user, isLoading } = useUser();
   const { session } = useSession();
+
+  // State management untuk alur langkah (step), input, loading, dan hasil analisis
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedTanaman, setSelectedTanaman] = useState<JenisTanaman | null>(null);
   const [trackers, setTrackers] = useState<TrackerOption[]>([]);
@@ -109,10 +119,13 @@ export default function AnalisisPenyakitPage() {
   const [rateLimitCountdown, setRateLimitCountdown] = useState<number | null>(null);
   const [rateLimitTotal, setRateLimitTotal] = useState<number>(60);
 
+  // Ref untuk mengakses input file secara programatis
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Mencari tracker lahan yang sedang dipilih
   const selectedTracker = trackers.find((tracker) => tracker.id === selectedTrackerId) || null;
 
+  // Handler saat memilih tanaman baru, mereset state input dan hasil sebelumnya
   const handleSelectTanaman = (value: JenisTanaman) => {
     setSelectedTanaman(value);
     setTrackers([]);
@@ -125,6 +138,7 @@ export default function AnalisisPenyakitPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Handler saat memilih tracker lahan
   const handleSelectTracker = (trackerId: string) => {
     setSelectedTrackerId(trackerId);
     setStep(2);
@@ -144,6 +158,7 @@ export default function AnalisisPenyakitPage() {
     return () => clearTimeout(timer);
   }, [rateLimitCountdown]);
 
+  // Handler saat file foto diunggah, memvalidasi format dan ukuran file
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -164,6 +179,7 @@ export default function AnalisisPenyakitPage() {
     setStep(2);
   };
 
+  // Fungsi pembantu untuk mengompresi dan mengonversi gambar ke base64 sebelum dikirim ke server
   const buildOptimizedImagePayload = async (file: File) => {
     const MAX_DIMENSION = 1400;
     const JPEG_QUALITY = 0.78;
@@ -227,6 +243,7 @@ export default function AnalisisPenyakitPage() {
     return compressed;
   };
 
+  // Handler utama untuk mengirim data gambar dan parameter ke API analisis penyakit
   const handleAnalisis = async () => {
     if (!imageFile || !selectedTanaman || !selectedTrackerId) return;
     setIsAnalisisLoading(true);
@@ -292,6 +309,7 @@ export default function AnalisisPenyakitPage() {
     }
   };
 
+  // Handler untuk mereset seluruh state input ke kondisi awal
   const handleReset = () => {
     setStep(1);
     setSelectedTanaman(null);
@@ -310,6 +328,7 @@ export default function AnalisisPenyakitPage() {
       ? Math.round((rateLimitCountdown / rateLimitTotal) * 100)
       : 0;
 
+  // Effect untuk memuat daftar tracker lahan milik pengguna berdasarkan tanaman yang dipilih
   useEffect(() => {
     let mounted = true;
 
@@ -361,6 +380,7 @@ export default function AnalisisPenyakitPage() {
   }, [selectedTanaman, user, session]);
 
   return (
+    // Bagian return JSX halaman analisis penyakit
     <div className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
 
       {/* Header */}

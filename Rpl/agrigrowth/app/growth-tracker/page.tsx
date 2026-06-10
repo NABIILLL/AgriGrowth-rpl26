@@ -1,10 +1,12 @@
 "use client";
 
+// Import library, komponen header global, framer-motion, dan hooks kustom
 import Link from "next/link";
 import GlobalHeader from "@/components/GlobalHeader";
 import { motion, Variants } from "framer-motion";
 import { useUser } from "@/hooks/useUser";
 
+// Varian animasi Framer Motion untuk transisi masuk kontainer dan elemen anak
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -24,8 +26,10 @@ const fadeUpVariant: Variants = {
   },
 };
 
+// URL asset logo
 const imgLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
 
+// Opsi kartu komoditas tanaman beserta gambarnya
 const cropCards = [
   {
     id: "padi",
@@ -44,13 +48,18 @@ const cropCards = [
   },
 ];
 
+// Komponen utama halaman Growth Tracker (Pemilihan Komoditas)
 export default function GrowthTrackerPage() {
+  // Hook kustom untuk mengambil data profile user
   const { user, isLoading } = useUser();
 
   return (
+    // Return JSX UI halaman Growth Tracker
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
+      {/* Header global */}
       <GlobalHeader variant="light" />
 
+      {/* Konten Utama dengan animasi staggered */}
       <motion.section
         variants={staggerContainer}
         initial="hidden"
@@ -58,14 +67,17 @@ export default function GrowthTrackerPage() {
         className="bg-[#365a1a] py-14 text-white"
       >
         <div className="mx-auto grid w-full max-w-[1440px] gap-8 px-5 sm:px-10 lg:grid-cols-[290px_1fr] lg:items-center lg:gap-9 lg:px-14">
+          {/* Header Judul Halaman */}
           <motion.div variants={fadeUpVariant}>
             <h1 className="text-5xl font-extrabold leading-[0.95] sm:text-[75px]">Growth Tracker</h1>
             <p className="mt-1.5 text-[25px] font-semibold">Pilih komoditas tanaman</p>
           </motion.div>
 
+          {/* Grid Pilihan Tanaman */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-[30px]">
             {cropCards.map((card) => (
               <motion.div key={card.id} variants={fadeUpVariant}>
+                {/* Tautan navigasi menuju halaman riwayat pengamatan komoditas terpilih */}
                 <Link
                   href={`/observation/${card.id}/history`}
                   replace

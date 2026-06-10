@@ -1,7 +1,9 @@
 "use client";
 
+// Konfigurasi force-dynamic untuk mematikan caching halaman
 export const dynamic = "force-dynamic";
 
+// Import library React, router Next.js, ikon Lucide, Supabase, animasi Framer Motion, hook custom, dan komponen UI
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -13,6 +15,7 @@ import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { toast } from "react-hot-toast";
 import GlobalHeader from "@/components/GlobalHeader";
 
+// Konfigurasi animasi stagger untuk container dengan Framer Motion
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -21,14 +24,17 @@ const staggerContainer: Variants = {
   }
 };
 
+// Konfigurasi animasi fade up untuk element dengan Framer Motion
 const fadeUpVariant: Variants = {
   hidden: { opacity: 0, y: 30 },
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 70, damping: 15 } as const }
 };
 
+// Konstanta URL untuk logo default dan gambar profil default
 const imgLogo = "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=800&auto=format&fit=crop";
 const imgProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 
+// Interface untuk data form pengamatan
 interface FormData {
   trackerSelect: string;
   dayNumber: string;
@@ -39,17 +45,19 @@ interface FormData {
   lightCondition: string;
   plantCondition: string;
   fertilizerType: string;
-  landArea: string;
 }
 
+// Interface untuk data tracker
 interface TrackerData {
   id: string;
   title: string;
   plant_type: string;
   user_id: string;
   created_at: string;
+  land_area?: number | null;
 }
 
+// Interface untuk sampel tanaman dari tracker
 interface TrackerSampleData {
   id: string;
   tracker_id: string;
@@ -58,10 +66,15 @@ interface TrackerSampleData {
   created_at?: string;
 }
 
+// Komponen utama halaman form pengamatan tanaman
 export default function ObservationForm() {
   const router = useRouter();
+  
+  // State untuk menyimpan trackerId dan sampleId dari URL query parameter
   const [trackerIdFromQuery, setTrackerIdFromQuery] = useState("");
   const [sampleIdFromQuery, setSampleIdFromQuery] = useState("");
+  
+  // Mengambil parameter pencarian dari URL (query params) setelah komponen dimuat
   useEffect(() => {
     try {
       const sp = new URLSearchParams(window.location.search);
@@ -71,9 +84,13 @@ export default function ObservationForm() {
       // ignore in non-browser environments
     }
   }, []);
+  
+  // Menggunakan custom hook useUser untuk mendapatkan data pengguna aktif
   const { user, isLoading: userLoading } = useUser();
+  // Menggunakan custom hook useLogoutConfirm untuk menangani konfirmasi logout
   const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
   
+  // State management untuk menyimpan data formulir pengamatan
   const [formData, setFormData] = useState<FormData>({
     trackerSelect: "",
     dayNumber: "",
@@ -84,16 +101,16 @@ export default function ObservationForm() {
     lightCondition: "Cukup",
     plantCondition: "Sehat",
     fertilizerType: "NPK",
-    landArea: "1",
   });
 
+  // State untuk menyimpan daftar tracker, sampel tracker, loading, dan status submit
   const [trackers, setTrackers] = useState<TrackerData[]>([]);
   const [trackerSamples, setTrackerSamples] = useState<TrackerSampleData[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const userId = user?.id;
 
-  // Fetch user's trackers
+  // Mengambil daftar tracker milik pengguna yang sedang login dari database
   useEffect(() => {
     if (userLoading) return;
 
@@ -119,7 +136,7 @@ export default function ObservationForm() {
         console.log("Trackers fetched:", data);
         setTrackers(data);
 
-        // Preselect tracker from query when available, otherwise set first tracker as default
+        // Memilih tracker dari query secara otomatis jika ada, atau memilih tracker pertama sebagai default
         if (trackerIdFromQuery && data && data.some((tracker: TrackerData) => tracker.id === trackerIdFromQuery)) {
           setFormData((prev) => ({
             ...prev,
@@ -142,6 +159,7 @@ export default function ObservationForm() {
     fetchTrackers();
   }, [userId, userLoading, trackerIdFromQuery]);
 
+  // Mengambil data sampel tanaman berdasarkan tracker yang dipilih dari database Supabase
   useEffect(() => {
     if (!formData.trackerSelect) {
       setTrackerSamples([]);
@@ -167,6 +185,7 @@ export default function ObservationForm() {
     fetchTrackerSamples();
   }, [formData.trackerSelect]);
 
+  // Handler fungsi untuk mendeteksi dan memperbarui input text/select/number pada form
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -175,10 +194,11 @@ export default function ObservationForm() {
     }));
   };
 
+  // Handler fungsi untuk mengirimkan data pengamatan baru ke Supabase database
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
+    // Validasi data input form sebelum disimpan
     if (!formData.trackerSelect) {
       toast.error("Pilih tracker terlebih dahulu", { id: "Pilih tracker terlebih dahulu" });
       return;
@@ -211,10 +231,6 @@ export default function ObservationForm() {
       toast.error("Jenis pupuk wajib diisi", { id: "Jenis pupuk wajib diisi" });
       return;
     }
-    if (!formData.landArea || parseFloat(formData.landArea) <= 0) {
-      toast.error("Luas lahan wajib diisi dan harus lebih dari 0", { id: "Luas lahan wajib diisi dan harus lebih dari 0" });
-      return;
-    }
 
     setSubmitting(true);
 
@@ -231,7 +247,7 @@ export default function ObservationForm() {
       const leafCount = parseInt(formData.leafCount);
       const branchCount = formData.branchCount ? parseInt(formData.branchCount) : 0;
       const soilPh = parseFloat(formData.soilPh);
-      const landArea = parseFloat(formData.landArea);
+      const landArea = selectedTracker.land_area ? Number(selectedTracker.land_area) : 1;
       const selectedSample = trackerSamples.find((sample) => sample.id === sampleIdFromQuery) || trackerSamples[0] || null;
 
       if (!selectedSample) {
@@ -255,6 +271,7 @@ export default function ObservationForm() {
         land_area: landArea,
       });
 
+      // Menyisipkan data log sampel pertumbuhan ke tabel growth_sample_logs di database Supabase
       const { error: sampleInsertError } = await supabase.from("growth_sample_logs").insert({
         tracker_id: formData.trackerSelect,
         sample_id: selectedSample.id,
@@ -274,6 +291,7 @@ export default function ObservationForm() {
         throw sampleInsertError;
       }
 
+      // Mengambil seluruh data sampel pengamatan di hari tersebut untuk dihitung nilai rata-ratanya
       const { data: sampleRows, error: sampleRowsError } = await supabase
         .from("growth_sample_logs")
         .select("plant_height, leaf_count, branch_count, soil_ph, light_condition, plant_condition, fertilizer_type, land_area")
@@ -285,6 +303,7 @@ export default function ObservationForm() {
         throw sampleRowsError;
       }
 
+      // Menghitung rata-rata nilai pertumbuhan dari sampel yang telah dikumpulkan
       const avg = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
       const sampleLogs = (sampleRows || []) as Array<{ plant_height: number; leaf_count: number; branch_count: number; soil_ph: number; light_condition: string; plant_condition: string; fertilizer_type: string; land_area: number }>;
       const aggregated = {
@@ -300,6 +319,7 @@ export default function ObservationForm() {
         land_area: Number(avg(sampleLogs.map((item) => Number(item.land_area))).toFixed(2)),
       };
 
+      // Memeriksa apakah log pertumbuhan umum untuk hari tersebut sudah ada di tabel growth_logs
       const { data: existingGrowth, error: existingGrowthError } = await supabase
         .from("growth_logs")
         .select("id")
@@ -312,6 +332,7 @@ export default function ObservationForm() {
         throw existingGrowthError;
       }
 
+      // Melakukan update atau insert ke tabel growth_logs berdasarkan data rata-rata baru
       if (existingGrowth?.id) {
         const { error: updateError } = await supabase.from("growth_logs").update(aggregated).eq("id", existingGrowth.id);
         if (updateError) {
@@ -329,7 +350,7 @@ export default function ObservationForm() {
       toast.success("Data pengamatan berhasil disimpan!", { id: "Data pengamatan berhasil disimpan!" });
       console.log("Redirecting to:", `/observation/${selectedTracker.plant_type}/history?trackerId=${selectedTracker.id}`);
       
-      // Redirect to history page (use replace so browser back doesn't return to the form)
+      // Navigasi ke halaman riwayat pengamatan setelah berhasil menyimpan data
       router.replace(`/observation/${selectedTracker.plant_type}/history?trackerId=${selectedTracker.id}`);
     } catch (error: any) {
       console.error("Error saving data:", error, JSON.stringify(error));
@@ -338,6 +359,7 @@ export default function ObservationForm() {
     }
   };
 
+  // Render UI Loading State jika data user atau list tracker sedang dimuat
   if (userLoading || loading) {
     return (
       <main className="min-h-screen bg-[#f4f4f4]">
@@ -351,6 +373,7 @@ export default function ObservationForm() {
     );
   }
 
+  // Render UI Jika Pengguna Belum Terautentikasi (Belum Login)
   if (!user) {
     return (
       <main className="min-h-screen bg-[#f4f4f4]">
@@ -367,25 +390,29 @@ export default function ObservationForm() {
     );
   }
 
+  // Render UI Halaman Formulir Input Data Pengamatan Utama
   return (
     <main className="min-h-screen bg-[#f4f4f4]">
-      {/* Header */}
+      {/* Komponen Header Global */}
       <GlobalHeader variant="light" />
 
-      {/* Content */}
+      {/* Kontainer Utama */}
       <motion.section 
         variants={staggerContainer}
         initial="hidden"
         animate="show"
         className="mx-auto w-full max-w-[800px] px-4 sm:px-6 pb-12 pt-6 sm:pt-10"
       >
+        {/* Bagian Judul Halaman */}
         <motion.div variants={fadeUpVariant} className="mb-6 sm:mb-8 text-center">
           <h1 className="text-xl sm:text-2xl md:text-[32px] font-extrabold text-[#365a1a] mb-2">Input Data Pengamatan</h1>
           <p className="text-xs sm:text-sm md:text-base text-[#365a1a]/70 mb-6 sm:mb-8">Masukkan data pertumbuhan tanaman Anda</p>
         </motion.div>
 
+        {/* Kotak Formulir Pengamatan */}
         <motion.div variants={fadeUpVariant} className="rounded-[24px] sm:rounded-[30px] border-2 border-[#365a1a] bg-white p-5 sm:p-8 md:p-10 shadow-[6px_-6px_15px_0px_rgba(0,0,0,0.1),-6px_6px_15px_0px_rgba(0,0,0,0.1)]">
           {trackers.length === 0 ? (
+            // UI peringatan jika belum membuat tracker di dashboard
             <div className="rounded-lg bg-yellow-50 border-2 border-yellow-200 p-6 text-center">
               <p className="text-yellow-800 font-semibold mb-2">Belum ada tracker</p>
               <p className="text-yellow-700 text-sm mb-4">
@@ -399,8 +426,10 @@ export default function ObservationForm() {
               </Link>
             </div>
           ) : (
+            // Form Utama Pengamatan
             <form onSubmit={handleSubmit} className="space-y-6">
               {trackerSamples.length > 0 && (
+                // Input Dropdown untuk Memilih Sampel Tanaman
                 <div>
                   <label className="block text-sm font-bold text-[#365a1a] mb-2">
                     Pilih Sampel *
@@ -419,7 +448,7 @@ export default function ObservationForm() {
                 </div>
               )}
 
-              {/* Tracker Select */}
+              {/* Input Dropdown untuk Memilih Tracker Lahan */}
               <div>
                 <label className="block text-sm font-bold text-[#365a1a] mb-2">
                   Pilih Tracker *
@@ -439,7 +468,7 @@ export default function ObservationForm() {
                 </select>
               </div>
 
-              {/* Day Number */}
+              {/* Input Angka untuk Hari Pengamatan */}
               <div>
                 <label className="block text-sm font-bold text-[#365a1a] mb-2">
                   Hari ke- *
@@ -455,7 +484,7 @@ export default function ObservationForm() {
                 />
               </div>
 
-              {/* Plant Height */}
+              {/* Input Angka untuk Tinggi Tanaman */}
               <div>
                 <label className="block text-sm font-bold text-[#365a1a] mb-2">
                   Tinggi Tanaman (cm) *
@@ -472,7 +501,7 @@ export default function ObservationForm() {
                 />
               </div>
 
-              {/* Leaf Count */}
+              {/* Input Angka untuk Jumlah Daun */}
               <div>
                 <label className="block text-sm font-bold text-[#365a1a] mb-2">
                   Jumlah Daun *
@@ -488,7 +517,7 @@ export default function ObservationForm() {
                 />
               </div>
 
-              {/* Branch Count */}
+              {/* Input Angka untuk Jumlah Cabang */}
               <div>
                 <label className="block text-sm font-bold text-[#365a1a] mb-2">
                   Jumlah Cabang
@@ -504,7 +533,7 @@ export default function ObservationForm() {
                 />
               </div>
 
-              {/* Soil PH */}
+              {/* Input Angka untuk Nilai pH Tanah */}
               <div>
                 <label className="block text-sm font-bold text-[#365a1a] mb-2">
                   pH Tanah *
@@ -522,7 +551,7 @@ export default function ObservationForm() {
                 />
               </div>
 
-              {/* Light Condition */}
+              {/* Input Teks untuk Kondisi Cahaya */}
               <div>
                 <label className="block text-sm font-bold text-[#365a1a] mb-2">
                   Kondisi Cahaya *
@@ -537,7 +566,7 @@ export default function ObservationForm() {
                 />
               </div>
 
-              {/* Plant Condition */}
+              {/* Input Teks untuk Kondisi Tanaman */}
               <div>
                 <label className="block text-sm font-bold text-[#365a1a] mb-2">
                   Kondisi Tanaman *
@@ -552,7 +581,7 @@ export default function ObservationForm() {
                 />
               </div>
 
-              {/* Fertilizer Type */}
+              {/* Input Teks untuk Jenis Pupuk */}
               <div>
                 <label className="block text-sm font-bold text-[#365a1a] mb-2">
                   Jenis Pupuk *
@@ -567,24 +596,7 @@ export default function ObservationForm() {
                 />
               </div>
 
-              {/* Land Area */}
-              <div>
-                <label className="block text-sm font-bold text-[#365a1a] mb-2">
-                  Luas Lahan *
-                </label>
-                <input
-                  type="number"
-                  name="landArea"
-                  value={formData.landArea}
-                  onChange={handleChange}
-                  placeholder="Contoh: 1"
-                  step="0.1"
-                  min="0.1"
-                  className="w-full rounded-lg border-2 border-[#365a1a] px-4 py-3 text-[#365a1a] placeholder:text-gray-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#365a1a] focus:ring-offset-2"
-                />
-              </div>
-
-              {/* Action Buttons */}
+              {/* Tombol Aksi Form (Batal dan Simpan) */}
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
