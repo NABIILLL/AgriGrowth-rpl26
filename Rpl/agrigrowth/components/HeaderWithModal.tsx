@@ -21,11 +21,11 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
         <AgrigrowthLogo imageSrc="/logo%201.png" showText={false} className="h-10 w-[170px] sm:h-11 sm:w-[190px]" />
 
         <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-6 text-[15px] xl:text-[16px] font-bold lg:flex whitespace-nowrap opacity-90">
-          <Link className="text-white/90 hover:text-white transition" href="/">Home</Link>
-          <Link className="text-white/90 hover:text-white transition" href="/about">About</Link>
-          <Link className="text-white/90 hover:text-white transition" href="/growth-tracker">Growth Tracker</Link>
-          <Link className="text-white/90 hover:text-white transition" href="/weather">Weather</Link>
-          <Link className="text-white/90 hover:text-white transition" href="/history">History</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/">Beranda</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/about">Tentang Kami</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/growth-tracker">Pelacak Pertumbuhan</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/weather">Cuaca</Link>
+          <Link className="text-white/90 hover:text-white transition" href="/history">Riwayat</Link>
           <Link className="text-white/90 hover:text-white transition" href="/analisis-penyakit">Analisis Penyakit</Link>
         </nav>
 
@@ -44,12 +44,12 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
               <>
                 <SignInButton mode="modal">
                   <button className="text-sm font-semibold text-white/85 hover:text-white transition">
-                    Sign In
+                    Masuk
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
                   <button className="inline-flex items-center gap-3 rounded-full bg-[#365a1a] px-4 py-2 shadow-lg hover:bg-[#2d4915] transition text-white">
-                    <span className="text-lg font-medium">Sign Up</span>
+                    <span className="text-lg font-medium">Daftar</span>
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f3b300] font-bold text-black">›</span>
                   </button>
                 </SignUpButton>
@@ -71,11 +71,11 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
         {mobileOpen && (
           <div className="lg:hidden absolute right-4 top-16 z-20 w-64 rounded-md bg-[rgba(2,6,23,0.72)] p-4 shadow-lg">
             <nav className="flex flex-col gap-3">
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/">Home</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/about">About</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/growth-tracker">Growth Tracker</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/weather">Weather</Link>
-              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/history">History</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/">Beranda</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/about">Tentang Kami</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/growth-tracker">Pelacak Pertumbuhan</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/weather">Cuaca</Link>
+              <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/history">Riwayat</Link>
               <Link onClick={() => setMobileOpen(false)} className="text-base font-semibold text-white/95 hover:text-white" href="/analisis-penyakit">Analisis Penyakit</Link>
             </nav>
 
@@ -88,10 +88,10 @@ export default function HeaderWithModal({ onSignUpClick, onSignInClick }: Header
               {isLoaded && !isSignedIn && (
                 <div className="flex flex-col gap-2">
                   <SignInButton mode="modal">
-                    <button className="text-left text-sm font-semibold text-white/90">Sign In</button>
+                    <button className="text-left text-sm font-semibold text-white/90">Masuk</button>
                   </SignInButton>
                   <SignUpButton mode="modal">
-                    <button className="rounded-md bg-[rgba(54,90,26,0.9)] px-3 py-2 text-white font-medium text-left">Sign Up</button>
+                    <button className="rounded-md bg-[rgba(54,90,26,0.9)] px-3 py-2 text-white font-medium text-left">Daftar</button>
                   </SignUpButton>
                 </div>
               )}
