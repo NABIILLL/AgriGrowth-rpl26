@@ -1,8 +1,10 @@
 "use client";
 
+// Import library dan fungsi utilitas API admin yang dibutuhkan
 import { useEffect, useMemo, useState } from "react";
 import { adminFetch } from "@/app/admin/_lib/adminApi";
 
+// Definisi tipe data untuk data pengguna dari Supabase, perannya (role), dan profilnya
 type SupabaseUser = {
   id: string;
   email?: string | null;
@@ -13,6 +15,7 @@ type SupabaseUser = {
 type RoleRow = { user_id: string; role: string | null };
 type ProfileRow = { id: string; name?: string | null };
 
+// State awal untuk formulir input pengguna baru
 const emptyForm = {
   name: "",
   email: "",
@@ -20,7 +23,9 @@ const emptyForm = {
   role: "user",
 };
 
+// Komponen utama halaman Kelola Pengguna (Admin)
 export default function AdminUsersPage() {
+  // State management untuk menyimpan daftar user, roles, profil, loading, error, formulir, dan ID user yang sedang diedit
   const [users, setUsers] = useState<SupabaseUser[]>([]);
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
@@ -29,14 +34,17 @@ export default function AdminUsersPage() {
   const [form, setForm] = useState({ ...emptyForm });
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // useMemo untuk memetakan peran (role) pengguna berdasarkan user_id secara efisien
   const roleMap = useMemo(() => {
     return new Map(roles.map((row) => [row.user_id, row.role || "user"]));
   }, [roles]);
 
+  // useMemo untuk memetakan nama pengguna dari profil berdasarkan id pengguna secara efisien
   const nameMap = useMemo(() => {
     return new Map(profiles.map((row) => [row.id, row.name || ""]));
   }, [profiles]);
 
+  // Fungsi untuk memuat seluruh daftar pengguna, peran, dan profil dari API admin
   const loadUsers = async () => {
     setLoading(true);
     setError(null);
@@ -53,6 +61,7 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Memuat data saat pertama kali halaman di-render
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -62,6 +71,7 @@ export default function AdminUsersPage() {
     return () => { mounted = false; };
   }, []);
 
+  // Handler untuk menyimpan data pengguna baru atau memperbarui data pengguna yang ada (PATCH/POST)
   const handleSubmit = async () => {
     if (!form.email) {
       setError("Email wajib diisi");
@@ -106,6 +116,7 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Handler untuk memuat data pengguna terpilih ke formulir agar dapat diedit
   const handleEdit = (user: SupabaseUser) => {
     setEditingId(user.id);
     setForm({
@@ -116,6 +127,7 @@ export default function AdminUsersPage() {
     });
   };
 
+  // Handler untuk menghapus data akun pengguna berdasarkan ID
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus user ini?")) return;
     setError(null);
@@ -128,10 +140,13 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Menghitung total jumlah pengguna yang terdaftar
   const totalUsers = users.length;
 
   return (
+    // Return JSX untuk merender UI Kelola Pengguna
     <>
+      {/* Header Halaman dan Tombol Aksi Utama */}
       <div className="page-header">
         <div>
           <div className="page-title">Kelola Pengguna</div>
@@ -143,13 +158,16 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
+      {/* Tampilan pesan kesalahan jika ada */}
       {error && (
         <div className="panel" style={{ marginBottom: 14 }}>
           <div style={{ padding: "12px 16px", color: "var(--red)" }}>{error}</div>
         </div>
       )}
 
+      {/* Grid Kiri (Ringkasan Statistik) dan Kanan (Form Input Pengguna) */}
       <div className="grid-equal" style={{ marginBottom: 14 }}>
+        {/* Panel Ringkasan Jumlah Pengguna */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-users"></i> Ringkasan Pengguna</div>
@@ -158,6 +176,7 @@ export default function AdminUsersPage() {
             <div className="stat-cell"><div className="stat-cell-num">{totalUsers}</div><div className="stat-cell-lbl">Total</div></div>
           </div>
         </div>
+        {/* Panel Formulir Input User */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-user-plus"></i> Form Pengguna</div>
@@ -174,6 +193,7 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
+      {/* Tabel Daftar Pengguna */}
       <div className="panel">
         <div className="panel-header">
           <div className="panel-title"><i className="ti ti-user-check"></i> Daftar Pengguna</div>

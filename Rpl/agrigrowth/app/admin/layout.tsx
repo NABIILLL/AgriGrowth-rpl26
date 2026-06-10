@@ -47,6 +47,20 @@ type NotificationItem = {
   tone: "g" | "a" | "b";
 };
 
+function formatDate(dateStr?: string | null) {
+  if (!dateStr) return "";
+  try {
+    return new Date(dateStr).toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useUser();
   const pathname = usePathname();

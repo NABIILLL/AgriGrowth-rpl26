@@ -1,9 +1,11 @@
 "use client";
 
+// Import library, hooks, dan klien Supabase yang dibutuhkan
 import { useEffect, useMemo, useState } from "react";
 import { adminFetch } from "@/app/admin/_lib/adminApi";
 import { supabase } from "@/lib/supabase";
 
+// Definisi tipe data untuk user, tracker, logs, sampel, dan kalkulasi prediksi panen
 type SupabaseUser = {
   id: string;
   email?: string | null;
@@ -46,33 +48,40 @@ type TrackerPrediction = {
   dataPoints: number;
 };
 
+// Fungsi pembantu untuk memformat tanggal ke format string sederhana
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
   return value.split("T")[0];
 };
 
+// Fungsi pembantu untuk mendapatkan nama hari singkat (contoh: Mon, Tue)
 const getShortDay = (date: Date) =>
   date.toLocaleDateString("en-US", { weekday: "short" });
 
+// Parameter dasar heuristik untuk estimasi panen dan kebutuhan pupuk berdasarkan jenis tanaman
 const cropDefaults: Record<string, { maturityHeight: number; maturityDays: number; baseYieldTonPerHa: number; fertilizerKgPerHa: number }> = {
   padi: { maturityHeight: 100, maturityDays: 110, baseYieldTonPerHa: 6.2, fertilizerKgPerHa: 250 },
   jagung: { maturityHeight: 250, maturityDays: 100, baseYieldTonPerHa: 8.5, fertilizerKgPerHa: 300 },
   bawang: { maturityHeight: 50, maturityDays: 65, baseYieldTonPerHa: 18.0, fertilizerKgPerHa: 350 },
 };
 
+// Fungsi pembantu untuk memformat label tanaman
 const cropLabel = (plantType?: string | null) => {
   if (plantType === "jagung") return "Jagung";
   if (plantType === "bawang") return "Bawang Merah";
   return "Padi";
 };
 
+// Fungsi pembantu untuk menormalisasi kunci tanaman
 const cropKey = (plantType?: string | null) => {
   if (plantType === "jagung") return "jagung";
   if (plantType === "bawang") return "bawang";
   return "padi";
 };
 
+// Komponen utama halaman Dashboard Admin
 export default function AdminDashboardPage() {
+  // State management untuk menyimpan seluruh data relasional sistem dan status monitoring
   const [users, setUsers] = useState<SupabaseUser[]>([]);
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
@@ -84,8 +93,11 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastSynced, setLastSynced] = useState<string>("");
 
+  // useMemo untuk efisiensi mapping data relasi
   const roleMap = useMemo(() => new Map(roles.map((row) => [row.user_id, row.role || "user"])), [roles]);
   const profileMap = useMemo(() => new Map(profiles.map((row) => [row.id, row])), [profiles]);
+  
+  // useMemo menghitung jumlah tracker per pengguna
   const trackerCountMap = useMemo(() => {
     const map = new Map<string, number>();
     trackers.forEach((tracker) => {
@@ -96,12 +108,14 @@ export default function AdminDashboardPage() {
 
   const trackerMap = useMemo(() => new Map(trackers.map((tracker) => [tracker.id, tracker])), [trackers]);
 
+  // useMemo mengurutkan pengguna yang baru bergabung
   const recentUsers = useMemo(() => {
     return [...users]
       .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
       .slice(0, 4);
   }, [users]);
 
+  // useMemo menghitung persentase peran (role) pengguna
   const roleDistribution = useMemo(() => {
     const counts = new Map<string, number>();
     roles.forEach((row) => {
@@ -111,6 +125,7 @@ export default function AdminDashboardPage() {
     return counts;
   }, [roles]);
 
+  // Kalkulasi heuristik untuk prediksi panen, taksiran hasil panen (yield), dan pupuk
   const trackerPredictions = useMemo<TrackerPrediction[]>(() => {
     const byTracker = new Map<string, GrowthLog[]>();
     growthLogs.forEach((log) => {
@@ -167,6 +182,7 @@ export default function AdminDashboardPage() {
       .sort((a, b) => a.daysToHarvest === null ? 1 : b.daysToHarvest === null ? -1 : a.daysToHarvest - b.daysToHarvest);
   }, [growthLogs, trackers]);
 
+  // useMemo menghitung statistik ringkasan data prediksi panen
   const predictionStats = useMemo(() => {
     const ready = trackerPredictions.filter((item) => item.dataPoints >= 2);
     const urgent = ready.filter((item) => item.daysToHarvest !== null && item.daysToHarvest <= 14);
@@ -181,6 +197,7 @@ export default function AdminDashboardPage() {
     };
   }, [trackerPredictions]);
 
+  // Effect untuk menginisialisasi pengambilan data secara berkala dan sinkronisasi real-time via WebSockets Supabase
   useEffect(() => {
     let isMounted = true;
     let timeoutId: NodeJS.Timeout;
@@ -214,23 +231,23 @@ export default function AdminDashboardPage() {
       }
     };
 
-    // Initial load
+    // Pemuatan data pertama kali
     loadData();
 
-    // Supabase Realtime Listener (WebSockets)
+    // Supabase Realtime Listener (WebSockets) untuk sinkronisasi data instan saat ada perubahan di database
     const channel = supabase
       .channel('admin-realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public' },
         () => {
-            // Whenever ANY table in public schema changes, refresh the data
+            // Segarkan data ketika terjadi perubahan pada skema publik
             if (isMounted) loadData();
           }
       )
       .subscribe();
 
-    // Auto-refresh every 15 seconds as a fallback
+    // Polling otomatis setiap 15 detik sebagai fallback
     const startPolling = () => {
       timeoutId = setTimeout(() => {
         loadData().finally(startPolling);
@@ -245,6 +262,7 @@ export default function AdminDashboardPage() {
     };
   }, []);
 
+  // Effect untuk menggambar grafik batang aktivitas harian log pertumbuhan 7 hari terakhir
   useEffect(() => {
     const now = new Date();
     const last7Days = Array.from({ length: 7 }, (_, index) => {
@@ -272,6 +290,7 @@ export default function AdminDashboardPage() {
     });
   }, [growthLogs]);
 
+  // useMemo untuk menyusun daftar 5 aktivitas log terbaru di seluruh sistem
   const activityItems = useMemo(() => {
     const recentGrowthLogs = [...growthLogs]
       .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
@@ -330,13 +349,16 @@ export default function AdminDashboardPage() {
   }, [growthLogs, growthSampleLogs, trackerSamples, trackers, users, profileMap, trackerMap]);
 
   return (
+    // Return JSX UI Dashboard Utama Admin
     <>
+      {/* Notifikasi Error jika ada */}
       {error && (
         <div className="panel" style={{ marginBottom: 14 }}>
           <div style={{ padding: "12px 16px", color: "var(--red)" }}>{error}</div>
         </div>
       )}
 
+      {/* Header Dashboard & Sinkronisasi */}
       <div className="page-header">
         <div>
           <div className="page-title">System Overview</div>
@@ -347,6 +369,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* Grid Kartu KPI (Key Performance Indicator) */}
       <div className="kpi-grid">
         <div className="kpi-card g">
           <div className="kpi-icon g"><i className="ti ti-users"></i></div>
@@ -365,6 +388,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* Layout Grid Panel Prediksi Panen Lahan */}
       <div className="grid-3-2" style={{ marginBottom: 18 }}>
         <div className="panel" style={{ background: "linear-gradient(135deg, rgba(54,90,26,0.08), rgba(97,174,37,0.04))", border: "1px solid rgba(54,90,26,0.14)" }}>
           <div className="panel-header">
@@ -375,6 +399,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <div style={{ padding: 12, display: "grid", gap: 12 }}>
+            {/* Ringkasan status prediksi */}
             <div className="stat-inline" style={{ marginBottom: 0 }}>
               <div className="stat-cell">
                 <div className="stat-cell-num">{predictionStats.readyCount}</div>
@@ -390,6 +415,7 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
+            {/* Daftar detail prediksi panen tracker lahan */}
             {trackerPredictions.length === 0 ? (
               <div style={{ padding: "12px 0", color: "var(--text4)" }}>Belum ada tracker untuk dihitung prediksi panennya.</div>
             ) : (
@@ -419,7 +445,9 @@ export default function AdminDashboardPage() {
 
       </div>
 
+      {/* Grid Grafik Batang Harian & Feed Aktivitas Live */}
       <div className="grid-3-2">
+        {/* Panel Grafik Pertumbuhan */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-chart-bar"></i> Growth Logs — Daily</div>
@@ -435,6 +463,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
+        {/* Panel Live Activity Feed */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-activity"></i> Live Activity</div>
@@ -455,7 +484,9 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* Grid Daftar Pengguna Baru & Distribusi Role */}
       <div className="grid-3-2">
+        {/* Panel Recent Users */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-users"></i> Recent Users</div>
@@ -491,6 +522,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
+        {/* Panel Role Distribution */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-chart-donut"></i> Role Distribution</div>

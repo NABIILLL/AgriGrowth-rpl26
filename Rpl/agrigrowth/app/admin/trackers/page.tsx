@@ -1,8 +1,10 @@
 "use client";
 
+// Import library dan fungsi utilitas API admin yang dibutuhkan
 import { useEffect, useState } from "react";
 import { adminFetch } from "@/app/admin/_lib/adminApi";
 
+// Definisi tipe data untuk data pengguna, profil, dan tracker lahan
 type AdminUser = { id: string; user_metadata?: { name?: string | null } | null; email?: string | null };
 type SimpleProfile = { id: string; name?: string | null };
 
@@ -14,21 +16,26 @@ type Tracker = {
   created_at?: string | null;
 };
 
+// State awal formulir tracker baru
 const emptyForm = {
   user_id: "",
   title: "",
   plant_type: "",
 };
 
+// Komponen utama halaman Kelola Tracker (Admin)
 export default function AdminTrackersPage() {
+  // State untuk menyimpan daftar tracker, status loading, error, formulir, dan ID tracker yang sedang diedit
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [editingId, setEditingId] = useState<string | null>(null);
   
+  // Map untuk mempermudah pencarian nama profil pengguna berdasarkan user_id
   const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map());
 
+  // Fungsi untuk mengambil data tracker dan pengguna secara paralel dari API admin
   const loadTrackers = async () => {
     setLoading(true);
     setError(null);
@@ -57,6 +64,7 @@ export default function AdminTrackersPage() {
     }
   };
 
+  // Memuat data saat pertama kali halaman di-render
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -66,6 +74,7 @@ export default function AdminTrackersPage() {
     return () => { mounted = false; };
   }, []);
 
+  // Handler untuk menyimpan data tracker baru atau memperbarui data tracker (PATCH/POST)
   const handleSubmit = async () => {
     if (!form.title || !form.user_id) {
       setError("user_id dan title wajib diisi");
@@ -95,6 +104,7 @@ export default function AdminTrackersPage() {
     }
   };
 
+  // Handler untuk memuat data tracker terpilih ke formulir agar dapat diedit
   const handleEdit = (tracker: Tracker) => {
     setEditingId(tracker.id);
     setForm({
@@ -104,6 +114,7 @@ export default function AdminTrackersPage() {
     });
   };
 
+  // Handler untuk menghapus data tracker berdasarkan ID
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus tracker ini?")) return;
     setError(null);
@@ -117,7 +128,9 @@ export default function AdminTrackersPage() {
   };
 
   return (
+    // Return JSX untuk merender UI halaman Kelola Tracker
     <>
+      {/* Header Halaman dan Tombol Aksi */}
       <div className="page-header">
         <div>
           <div className="page-title">Kelola Tracker</div>
@@ -129,13 +142,16 @@ export default function AdminTrackersPage() {
         </div>
       </div>
 
+      {/* Tampilan pesan kesalahan jika ada */}
       {error && (
         <div className="panel" style={{ marginBottom: 14 }}>
           <div style={{ padding: "12px 16px", color: "var(--red)" }}>{error}</div>
         </div>
       )}
 
+      {/* Grid Menu Kontrol Atas (Form Input, Statistik, Pencarian) */}
       <div className="grid-3" style={{ marginBottom: 14 }}>
+        {/* Panel Form Tracker */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-plant-2"></i> Form Tracker</div>
@@ -147,6 +163,7 @@ export default function AdminTrackersPage() {
           </div>
         </div>
 
+        {/* Panel Statistik Total Tracker */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-chart-bar"></i> Total Tracker</div>
@@ -156,6 +173,7 @@ export default function AdminTrackersPage() {
           </div>
         </div>
 
+        {/* Panel Cari Tracker */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-search"></i> Cari Tracker</div>
@@ -166,6 +184,7 @@ export default function AdminTrackersPage() {
         </div>
       </div>
 
+      {/* Panel Tabel Daftar Tracker */}
       <div className="panel">
         <div className="panel-header">
           <div className="panel-title"><i className="ti ti-list"></i> Daftar Tracker</div>

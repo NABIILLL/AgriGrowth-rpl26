@@ -1,5 +1,6 @@
 "use client";
 
+// Import library, hooks kustom, Supabase client, framer-motion, dan komponen UI
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,7 +12,7 @@ import { motion, Variants } from "framer-motion";
 import { UserButton } from "@clerk/nextjs";
 import GlobalHeader from "@/components/GlobalHeader";
 
-// Animation variants
+// Definisi varian animasi Framer Motion untuk stagger transition dan fade-up
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -31,22 +32,23 @@ const fadeUpVariant: Variants = {
   }
 };
 
-// Logo and profile images
+// URL Aset Gambar & Icon Default
 const imgLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
 const imgProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 
-// Growth tracker cards images
+// Gambar Ilustrasi Kartu Tracker
 const imgSawahBelakangKampus = "/padi.png";
 const imgJagungRezon = "/jagung.png";
 const imgPadiPraktikum = "/bawang.png";
 
-// Result page images
+// Gambar Aset Hasil Analisis
 const imgRice2 = "https://images.unsplash.com/photo-1530507629858-e4977d30e9e0?q=80&w=800&auto=format&fit=crop";
 const imgResultField = "https://images.unsplash.com/photo-1530507629858-e4977d30e9e0?q=80&w=800&auto=format&fit=crop";
 const imgPlantSheaf = "https://api.iconify.design/lucide:wheat.svg?color=%23365a1a";
 const imgResultLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
 const imgResultProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 
+// Daftar kartu komoditas tanaman
 const cropCards = [
   {
     id: "padi",
@@ -65,7 +67,9 @@ const cropCards = [
   },
 ];
 
+// Komponen utama halaman Dashboard Pengguna
 export default function Dashboard() {
+  // State management untuk nama tracker, modal, input tanaman, hasil analisis, loading, dan tracker aktif
   const [trackerTitle, setTrackerTitle] = useState("");
   const [isPlantMenuOpen, setIsPlantMenuOpen] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState<string | null>(null);
@@ -75,27 +79,32 @@ export default function Dashboard() {
   const [activeTrackerId, setActiveTrackerId] = useState<string | null>(null);
   const [activePlantLabel, setActivePlantLabel] = useState("Padi");
   const [isCreatingTracker, setIsCreatingTracker] = useState(false);
+  
+  // Custom hooks untuk navigasi dan pengambilan data profile user yang sedang aktif
   const { user, isLoading } = useUser();
   const router = useRouter();
   const displayName = !isLoading && user ? user.name : "Guest";
   const userId = user?.id;
   const userRole = user?.role;
 
-  // Block direct access when there is no active Supabase session.
+  // Efek samping pengalihan (redirect) jika user belum masuk (belum ada session)
   useEffect(() => {
     if (!isLoading && !userId) {
       router.replace("/");
     }
   }, [isLoading, userId, router]);
 
-  // Redirect admins to the admin dashboard
+  // Efek samping pengalihan ke dashboard admin jika user memiliki peran admin
   useEffect(() => {
     if (!isLoading && userRole === "admin") {
       router.replace("/admin");
     }
   }, [userRole, isLoading, router]);
+
+  // Hook konfirmasi logout
   const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
 
+  // Handler pengiriman form awal pembuatan tracker
   const handleCreateTracker = (e: React.FormEvent) => {
     e.preventDefault();
     if (trackerTitle.trim()) {
@@ -103,6 +112,7 @@ export default function Dashboard() {
     }
   };
 
+  // Handler kelanjutan pembuatan tracker (menyimpan tracker baru ke database Supabase)
   const handleContinue = async () => {
     if (!selectedPlant) return;
 
@@ -141,6 +151,7 @@ export default function Dashboard() {
     }
   };
 
+  // Handler untuk menyimpan logbook data pertumbuhan ke tabel growth_logs
   const handleSaveAnalysis = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!activeTrackerId) {
@@ -157,6 +168,7 @@ export default function Dashboard() {
     const soilPh = parseFloat(formData.get("soil_ph") as string) || null; // pH tanah
     const landArea = parseFloat(formData.get("land_area") as string) || null; // Luas lahan
 
+    // Melakukan pengecekan validitas isi form agar tidak bernilai negatif atau salah kisaran
     if (dayNumber < 1) {
       toast.error("Hari pengamatan tidak valid.", { id: "Hari pengamatan tidak valid." });
       return;
@@ -185,7 +197,7 @@ export default function Dashboard() {
     const lightCondition = formData.get("light_condition") as string || null;
     const plantCondition = formData.get("plant_condition") as string || null;
 
-    // Check if conditions contain only numbers
+    // Cek apakah kondisi input hanya berisi angka (numeric check)
     const isOnlyNumeric = (str: string | null) => str !== null && /^[0-9.]+$/.test(str);
 
     if (isOnlyNumeric(lightCondition)) {
@@ -230,6 +242,7 @@ export default function Dashboard() {
     }
   };
 
+  // RENDER JSX MODE 1: Menampilkan Hasil Log Pertumbuhan jika pengisian baru selesai
   if (latestLog) {
     return (
       <main className="min-h-screen bg-[#b8b8b8] text-[#365a1a]">
@@ -254,6 +267,7 @@ export default function Dashboard() {
             </div>
           </section>
 
+          {/* Panel Rangkuman Nilai Data Pengamatan */}
           <section className="mt-5 rounded-[30px] border-[3px] border-[rgba(54,90,26,0.75)] px-5 py-5 sm:mt-6 sm:px-7 sm:py-6 lg:px-10 lg:py-8">
             <div className="text-[20px] font-bold sm:text-[24px]">Hari ke : {latestLog.day_number}</div>
 
@@ -306,6 +320,7 @@ export default function Dashboard() {
             </div>
           </section>
 
+          {/* Tombol navigasi ke riwayat observasi */}
           <Link
             href={`/observation/${activePlantLabel === "Bawang Merah" ? "bawang" : activePlantLabel.toLowerCase()}/history`}
             className="mt-6 flex h-[36px] w-full items-center justify-center rounded-full bg-[#365a1a] text-[14px] font-semibold text-white transition hover:bg-[#2d4915] sm:h-[38px] sm:text-[16px] lg:h-[44px] lg:text-[18px]"
@@ -317,6 +332,7 @@ export default function Dashboard() {
     );
   }
 
+  // RENDER JSX MODE 2: Menampilkan Formulir Pengamatan setelah tracker berhasil didefinisikan
   if (showAnalysisForm) {
     return (
       <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
@@ -328,6 +344,7 @@ export default function Dashboard() {
               Start your ‘{activeTrackerTitle || "Sawah belakang kampus"}’ analysis
             </h1>
 
+            {/* Form Input Growth Log */}
             <form onSubmit={handleSaveAnalysis} className="mt-6 space-y-5">
               <div className="group overflow-hidden border border-[#365a1a]">
                 <div className="bg-[#365a1a] px-4 py-2 text-center text-[14px] font-semibold text-white">
@@ -356,6 +373,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* Data parameter fisik pertumbuhan */}
               <div className="group overflow-hidden border border-[#365a1a]">
                 <div className="bg-[#365a1a] px-4 py-2 text-center text-[14px] font-semibold text-white">
                   Input data pertumbuhan tanaman
@@ -370,9 +388,10 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* Data kondisi lingkungan penanaman */}
               <div className="group overflow-hidden border border-[#365a1a]">
                 <div className="bg-[#365a1a] px-4 py-2 text-center text-[14px] font-semibold text-white">
-                  Input kondisi lingkungan
+                  Input data kondisi lingkungan
                 </div>
                 <p className="max-h-0 overflow-hidden bg-white px-4 text-[12px] text-[#365a1a]/80 opacity-0 transition-all duration-200 group-focus-within:max-h-16 group-focus-within:py-2 group-focus-within:opacity-100">
                   pH tanah: angka desimal 0-14. Kondisi cahaya dan kondisi tanaman: teks singkat.
@@ -384,12 +403,13 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* Data pupuk dan luas lahan */}
               <div className="group overflow-hidden border border-[#365a1a]">
                 <div className="bg-[#365a1a] px-4 py-2 text-center text-[14px] font-semibold text-white">
                   Kebutuhan pupuk dengan konversi luas lahan
                 </div>
                 <p className="max-h-0 overflow-hidden bg-white px-4 text-[12px] text-[#365a1a]/80 opacity-0 transition-all duration-200 group-focus-within:max-h-16 group-focus-within:py-2 group-focus-within:opacity-100">
-                  Jenis pupuk: teks. Luas lahan: angka desimal (misal m2 atau ha sesuai standar Anda).
+                  Jenis pupuk: teks. Luas lahan: angka desimal (misal m2 atau ha).
                 </p>
                 <div className="grid grid-cols-1 gap-px bg-[#365a1a] sm:grid-cols-2">
                   <input name="fertilizer_type" type="text" required placeholder="Jenis pupuk - teks, contoh: NPK" className="h-[38px] bg-white px-3 text-[13px] text-[#365a1a] outline-none placeholder:text-[#9fb08d]" />
@@ -397,6 +417,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* Tombol Simpan Form Log */}
               <button
                 type="submit"
                 className="h-[36px] w-full rounded-full bg-[#365a1a] text-[14px] font-semibold text-white transition hover:bg-[#2d4915]"
@@ -410,10 +431,12 @@ export default function Dashboard() {
     );
   }
 
+  // RENDER JSX DEFAULT: Tampilan utama dashboard dengan daftar tracker lahan yang ada
   return (
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
       <GlobalHeader variant="light" />
 
+      {/* Hero section dashboard dan daftar kartu tracker */}
       <motion.section 
         variants={staggerContainer}
         initial="hidden"
@@ -445,8 +468,7 @@ export default function Dashboard() {
         </div>
       </motion.section>
 
-      {/* Create new growth tracker form removed per user request */}
-
+      {/* Modal dialog untuk memilih jenis tanaman saat ingin membuat tracker baru */}
       {isPlantMenuOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-[3px]">
           <div className="relative w-full max-w-[300px] rounded-[26px] bg-white px-5 py-5 shadow-[0_10px_30px_rgba(0,0,0,0.2)] sm:max-w-[320px]">
@@ -494,6 +516,7 @@ export default function Dashboard() {
               })}
             </div>
 
+            {/* Tombol aksi konfirmasi pembuatan tracker baru */}
             <button
               type="button"
               onClick={handleContinue}

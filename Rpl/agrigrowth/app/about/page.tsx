@@ -1,5 +1,6 @@
 "use client";
 
+// Import library, hooks, dan komponen yang dibutuhkan
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
@@ -10,7 +11,7 @@ import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 
 import { motion, Variants } from "framer-motion";
 
-// Animasi kontainer framer-motion
+// Animasi kontainer framer-motion untuk stagger children
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -21,7 +22,7 @@ const staggerContainer: Variants = {
   }
 };
 
-// Animasi fade up framer-motion
+// Animasi fade up framer-motion untuk transisi masuk elemen
 const fadeUpVariant: Variants = {
   hidden: { opacity: 0, y: 30 },
   show: { 
@@ -34,17 +35,22 @@ const fadeUpVariant: Variants = {
 // URL icon profil default
 const imgProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 
+// Komponen utama halaman Tentang Kami / About
 export default function About() {
-  // Mengambil data user dan status loading
+  // Mengambil data user dan status loading dari hook custom
   const { user, isLoading } = useUser();
+  
   // Fungsi login Clerk
   const { openSignIn } = useClerk();
+  
   // State untuk toggle menu mobile
   const [mobileOpen, setMobileOpen] = useState(false);
+  
   // Hook untuk konfirmasi logout
   const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
 
   return (
+    // Return JSX UI halaman About
     <main className="min-h-screen bg-white text-[#365a1a]">
       {/* Header global */}
       <GlobalHeader variant="light" />
@@ -57,12 +63,12 @@ export default function About() {
         className="mx-auto w-full px-4 sm:px-5 py-8 sm:py-12 sm:px-10 lg:px-14"
       >
         <div className="mx-auto max-w-[1299px]">
-          {/* Title */}
+          {/* Judul Halaman */}
           <motion.h1 variants={fadeUpVariant} className="text-3xl font-extrabold leading-[1.2] sm:text-4xl md:text-5xl lg:text-[56px]">
             Tentang AgriGrowth Monitor
           </motion.h1>
 
-          {/* Description */}
+          {/* Deskripsi Singkat Platform */}
           <div className="mt-8 space-y-5 text-sm sm:text-base md:text-lg lg:text-[20px] leading-[1.6] text-[#365a1a]">
             <motion.p variants={fadeUpVariant}>
               AgriGrowth Monitor adalah platform digital berbasis web yang dirancang untuk membantu
@@ -78,7 +84,6 @@ export default function About() {
             </motion.p>
           </div>
 
-          {/* Stats Cards */}
           {/* Kartu Statistik Lahan & Komoditas */}
           <div 
             className="mt-12"

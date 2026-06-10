@@ -1,8 +1,10 @@
 "use client";
 
+// Import library dan fungsi utilitas API admin yang dibutuhkan
 import { useEffect, useState } from "react";
 import { adminFetch } from "@/app/admin/_lib/adminApi";
 
+// Definisi tipe data untuk data pengguna, profil, tracker, dan biaya produksi
 type AdminUser = { id: string; user_metadata?: { name?: string | null } | null; email?: string | null };
 type SimpleProfile = { id: string; name?: string | null };
 type TrackerRow = { id: string; user_id: string };
@@ -17,6 +19,7 @@ type ProductionCost = {
   created_at?: string | null;
 };
 
+// State awal formulir biaya produksi
 const emptyForm = {
   tracker_id: "",
   date: "",
@@ -25,21 +28,25 @@ const emptyForm = {
   amount: "",
 };
 
+// Kategori biaya produksi yang tersedia
 const costCategories = [
   "Bibit", "Pupuk", "Obat-obatan/Pestisida", "Tenaga Kerja", "Sewa Alat", "Transportasi", "Lain-lain"
 ];
 
+// Komponen utama halaman Kelola Biaya Produksi (Admin)
 export default function AdminCostsPage() {
+  // State untuk menyimpan daftar biaya, loading, error, formulir, dan ID entri yang sedang diedit
   const [costs, setCosts] = useState<ProductionCost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Maps for user lookup
+  // Map untuk mempermudah pencarian nama profil dan pemetaan tracker ke user
   const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map());
   const [trackerUserMap, setTrackerUserMap] = useState<Map<string, string>>(new Map());
 
+  // Fungsi untuk mengambil data biaya, user, dan tracker secara paralel dari API admin
   const loadCosts = async () => {
     setLoading(true);
     setError(null);
@@ -76,6 +83,7 @@ export default function AdminCostsPage() {
     }
   };
 
+  // Memuat data saat pertama kali halaman di-render
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -85,6 +93,7 @@ export default function AdminCostsPage() {
     return () => { mounted = false; };
   }, []);
 
+  // Handler untuk menyimpan data biaya baru atau memperbarui data yang sudah ada (PATCH/POST)
   const handleSubmit = async () => {
     if (!form.tracker_id || !form.date || !form.category || !form.amount) {
       setError("tracker_id, tanggal, kategori, dan jumlah biaya wajib diisi");
@@ -122,6 +131,7 @@ export default function AdminCostsPage() {
     }
   };
 
+  // Handler untuk memuat data item terpilih ke dalam formulir agar dapat diedit
   const handleEdit = (item: ProductionCost) => {
     setEditingId(item.id);
     setForm({
@@ -133,6 +143,7 @@ export default function AdminCostsPage() {
     });
   };
 
+  // Handler untuk menghapus data biaya produksi berdasarkan ID
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus biaya produksi ini?")) return;
     setError(null);
@@ -145,10 +156,13 @@ export default function AdminCostsPage() {
     }
   };
 
+  // Menghitung total seluruh biaya yang tercatat
   const totalCost = costs.reduce((sum, cost) => sum + Number(cost.amount), 0);
 
   return (
+    // Return JSX untuk merender UI Kelola Biaya Produksi
     <>
+      {/* Header Halaman dan Tombol Aksi Utama */}
       <div className="page-header">
         <div>
           <div className="page-title">Kelola Biaya Produksi</div>
@@ -160,13 +174,16 @@ export default function AdminCostsPage() {
         </div>
       </div>
 
+      {/* Tampilan pesan kesalahan jika ada */}
       {error && (
         <div className="panel" style={{ marginBottom: 14 }}>
           <div style={{ padding: "12px 16px", color: "var(--red)" }}>{error}</div>
         </div>
       )}
 
+      {/* Grid Kiri (Ringkasan) dan Kanan (Form Input) */}
       <div className="grid-equal" style={{ marginBottom: 14 }}>
+        {/* Panel Ringkasan Biaya */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-wallet"></i> Ringkasan Biaya Keseluruhan</div>
@@ -183,6 +200,7 @@ export default function AdminCostsPage() {
           </div>
         </div>
         
+        {/* Panel Formulir Input Data Biaya */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-edit"></i> Form Biaya Produksi</div>
@@ -199,6 +217,7 @@ export default function AdminCostsPage() {
         </div>
       </div>
 
+      {/* Tabel Daftar Biaya Produksi */}
       <div className="panel">
         <div className="panel-header">
           <div className="panel-title"><i className="ti ti-list"></i> Daftar Biaya Produksi</div>

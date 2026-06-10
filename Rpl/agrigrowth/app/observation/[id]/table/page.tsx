@@ -1,9 +1,11 @@
 "use client";
 
+// Import library React, hook useParams Next.js, dan komponen dashboard pemantauan pertumbuhan
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import GrowthMonitoringDashboard from "@/components/GrowthMonitoringDashboard";
 
+// Interface untuk data baris pengukuran pertumbuhan tanaman
 interface MeasurementData {
   day: number;
   height: string;
@@ -11,8 +13,11 @@ interface MeasurementData {
   branches: number;
 }
 
+// Komponen utama halaman tabel pengamatan tanaman berdasarkan ID tracker
 export default function ObservationTablePage() {
   const params = useParams();
+  
+  // State untuk menyimpan daftar pengukuran tanaman (data dummy default)
   const [measurements, setMeasurements] = useState<MeasurementData[]>([
     { day: 1, height: "1 cm", leaves: 2, branches: 1 },
     { day: 2, height: "1 cm", leaves: 2, branches: 1 },
@@ -21,9 +26,11 @@ export default function ObservationTablePage() {
     { day: 5, height: "2 cm", leaves: 4, branches: 2 },
   ]);
 
+  // State untuk menyimpan nama lahan dan status loading
   const [fieldName, setFieldName] = useState<string>("'Sawah belakang kampus'");
   const [isLoading, setIsLoading] = useState(true);
 
+  // Mengambil data pengukuran dan nama lahan dari Supabase secara berkala setelah komponen dimuat
   useEffect(() => {
     // TODO: Fetch measurements data from Supabase based on params.id
     // Example:
@@ -44,6 +51,7 @@ export default function ObservationTablePage() {
     setIsLoading(false);
   }, [params.id]);
 
+  // Render UI Loading State jika data sedang dimuat
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -55,5 +63,6 @@ export default function ObservationTablePage() {
     );
   }
 
+  // Render komponen dashboard utama pemantauan pertumbuhan tanaman
   return <GrowthMonitoringDashboard fieldName={fieldName} measurements={measurements} />;
 }

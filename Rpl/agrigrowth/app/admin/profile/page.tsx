@@ -1,8 +1,10 @@
 "use client";
 
+// Import library dan hooks yang dibutuhkan
 import { useMemo, useState } from "react";
 import { useUser, type UserProfile } from "@/hooks/useUser";
 
+// Definisi tipe data untuk formulir profil admin dan status penyimpanan data
 type ProfileForm = {
   name: string;
   phone: string;
@@ -16,6 +18,7 @@ type SaveState = {
   message: string;
 } | null;
 
+// Fungsi pembantu untuk memformat tanggal ke format lokal Indonesia
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
   return new Intl.DateTimeFormat("id-ID", {
@@ -25,6 +28,7 @@ const formatDate = (value?: string | null) => {
   }).format(new Date(value));
 };
 
+// Fungsi pembantu untuk membuat inisial nama admin (maksimal 2 huruf)
 const getInitials = (name: string) => {
   return (
     name
@@ -36,6 +40,7 @@ const getInitials = (name: string) => {
   ).toUpperCase();
 };
 
+// Fungsi pemetaan profil pengguna ke formulir profil admin
 const toForm = (user: UserProfile | null): ProfileForm => ({
   name: user?.name || "",
   phone: user?.phone || "",
@@ -44,6 +49,7 @@ const toForm = (user: UserProfile | null): ProfileForm => ({
   bio: user?.bio || "",
 });
 
+// Fungsi pembantu untuk membungkus Promise dengan mekanisme batas waktu (timeout)
 const withTimeout = async <T,>(promise: PromiseLike<T>, timeoutMs = 15000) => {
   let timeoutId: ReturnType<typeof setTimeout>;
   const timeout = new Promise<never>((_, reject) => {
@@ -59,6 +65,7 @@ const withTimeout = async <T,>(promise: PromiseLike<T>, timeoutMs = 15000) => {
   }
 };
 
+// Fungsi untuk menyimpan perubahan data profil admin ke server
 const saveAdminProfile = async (payload: ProfileForm) => {
   const response = await withTimeout(
     fetch("/api/profile", {
@@ -79,6 +86,7 @@ const saveAdminProfile = async (payload: ProfileForm) => {
   return result?.profile as UserProfile;
 };
 
+// Fungsi untuk menormalisasi nomor telepon ke standar format Indonesia (+62)
 const normalizeIndonesianPhone = (rawValue?: string | null) => {
   const raw = rawValue?.trim() || "";
   if (!raw) return { value: "", error: "" };
@@ -106,11 +114,14 @@ const normalizeIndonesianPhone = (rawValue?: string | null) => {
   return { value: normalized, error: "" };
 };
 
+// Sub-komponen formulir profil admin untuk mengontrol input dan aksi penyimpanan
 function AdminProfileForm({ user }: { user: UserProfile }) {
+  // State management untuk formulir, loading status, dan status penyimpanan
   const [form, setForm] = useState<ProfileForm>(() => toForm(user));
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>(null);
 
+  // useMemo untuk mengecek apakah ada perubahan data pada form dibanding profil asli
   const hasChanges = useMemo(() => {
     const initial = toForm(user);
     return Object.keys(initial).some((key) => {
@@ -119,11 +130,13 @@ function AdminProfileForm({ user }: { user: UserProfile }) {
     });
   }, [form, user]);
 
+  // Handler untuk mengembalikan isi formulir ke data awal
   const resetForm = () => {
     setForm(toForm(user));
     setSaveState(null);
   };
 
+  // Handler untuk menyimpan perubahan profil admin (melakukan validasi dan request API)
   const handleSave = async () => {
     let watchdog: ReturnType<typeof setTimeout> | null = null;
 
@@ -185,7 +198,9 @@ function AdminProfileForm({ user }: { user: UserProfile }) {
   };
 
   return (
+    // Return JSX untuk sub-komponen formulir admin
     <div className="admin-profile-grid">
+      {/* Profil Hero (Inisial, Nama, Email, Badge status) */}
       <section className="admin-profile-hero">
         <div className="admin-profile-avatar">{getInitials(user.name)}</div>
         <div className="admin-profile-main">
@@ -199,6 +214,7 @@ function AdminProfileForm({ user }: { user: UserProfile }) {
         </div>
       </section>
 
+      {/* Panel Detail Informasi Akses Akun */}
       <section className="panel">
         <div className="panel-header">
           <div className="panel-title"><i className="ti ti-shield-lock"></i> Akses Admin</div>
@@ -219,6 +235,7 @@ function AdminProfileForm({ user }: { user: UserProfile }) {
         </div>
       </section>
 
+      {/* Panel Input Formulir Edit Data Profil */}
       <section className="panel admin-profile-form-panel">
         <div className="panel-header">
           <div className="panel-title"><i className="ti ti-edit"></i> Edit Profil Admin</div>
@@ -257,12 +274,14 @@ function AdminProfileForm({ user }: { user: UserProfile }) {
             <textarea className="form-input" rows={4} value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} />
           </label>
 
+          {/* Menampilkan pesan sukses/error penyimpanan */}
           {saveState && (
             <div className={`admin-profile-alert ${saveState.type}`}>
               {saveState.message}
             </div>
           )}
 
+          {/* Tombol Simpan Profil */}
           <div className="admin-profile-actions">
             <button className="btn btn-primary" onClick={handleSave} disabled={saving || !hasChanges}>
               <i className={saving ? "ti ti-loader-2" : "ti ti-device-floppy"}></i>
@@ -275,9 +294,12 @@ function AdminProfileForm({ user }: { user: UserProfile }) {
   );
 }
 
+// Komponen halaman utama Profil Admin
 export default function AdminProfilePage() {
+  // Hook untuk mengambil profil user yang saat ini masuk
   const { user, isLoading } = useUser();
 
+  // Render status loading
   if (isLoading) {
     return (
       <div className="panel">
@@ -286,6 +308,7 @@ export default function AdminProfilePage() {
     );
   }
 
+  // Render jika data user tidak ditemukan
   if (!user) {
     return (
       <div className="panel">
@@ -295,6 +318,7 @@ export default function AdminProfilePage() {
   }
 
   return (
+    // Return JSX UI halaman utama Profil Admin
     <>
       <div className="page-header">
         <div>

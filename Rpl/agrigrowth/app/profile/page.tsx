@@ -1,5 +1,6 @@
 "use client";
 
+// Import library, icon Lucide React, hooks custom, dan komponen UI yang digunakan
 import Link from "next/link";
 import { useState, type ElementType } from "react";
 import {
@@ -27,6 +28,7 @@ import ProfileEditor from "@/components/ProfileEditor";
 import { useLogoutConfirm } from "@/hooks/useLogoutConfirm";
 import { motion, Variants } from "framer-motion";
 
+// Animasi transisi masuk menggunakan Framer Motion
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -46,6 +48,7 @@ const fadeUpVariant: Variants = {
   }
 };
 
+// URL Aset Gambar & Default profil data cadangan (fallback mock data)
 const imgLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
 const imgProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 
@@ -60,6 +63,7 @@ const defaultProfile = {
   tags: ["Padi", "Jagung", "Tanah Alluvial", "Pertanian Digital"],
 };
 
+// Mock data statistik buatan
 const stats = [
   { label: "Lahan Aktif", value: "12" },
   { label: "Tahun Exp.", value: "8+" },
@@ -67,6 +71,7 @@ const stats = [
   { label: "Analisis Baru", value: "3" },
 ];
 
+// Mock data keahlian budidaya
 const skills = [
   { label: "Analisis Tanah", value: 92 },
   { label: "Pemantauan Cuaca", value: 85 },
@@ -74,6 +79,7 @@ const skills = [
   { label: "Data Digital", value: 88 },
 ];
 
+// Mock data lahan tanaman milik pengguna
 const fields = [
   { name: "Padi lahan Bogor", badge: "Aktif", tone: "emerald" },
   { name: "Jagung Rezon", badge: "Panen", tone: "amber" },
@@ -81,6 +87,7 @@ const fields = [
   { name: "Sawah belakang kampus", badge: "Aktif", tone: "emerald" },
 ];
 
+// Mock data aktivitas log terbaru pengguna
 const activities = [
   {
     title: "Analisis selesai - Sawah belakang kampus",
@@ -102,11 +109,14 @@ const activities = [
   },
 ];
 
+// Komponen utama halaman Profil Pengguna
 export default function ProfilePage() {
+  // State dan hooks untuk mengambil status user, Clerk login, modal edit profil, dan konfirmasi logout
   const { user, isLoading } = useUser();
   const { openSignIn } = useClerk();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // Menentukan variabel display berdasarkan prioritas data user aktif dari DB dibanding data dummy
   const displayName = user?.name || defaultProfile.name;
   const displayEmail = user?.email || defaultProfile.email;
   const displayPhone = user?.phone || defaultProfile.phone;
@@ -123,7 +133,9 @@ export default function ProfilePage() {
   const { logout: handleLogout, isLoggingOut } = useLogoutConfirm();
 
   return (
+    // Return JSX untuk merender UI Halaman Profil Pengguna
     <main className="min-h-screen bg-[#f4f4f4] text-[#365a1a]">
+      {/* Komponen Modal Editor Profil */}
       <ProfileEditor
         key={isEditModalOpen ? `profile-editor-open-${user?.id || "guest"}` : `profile-editor-closed-${user?.id || "guest"}`}
         isOpen={isEditModalOpen}
@@ -133,6 +145,7 @@ export default function ProfilePage() {
 
       <GlobalHeader variant="light" />
 
+      {/* Kontainer Utama Konten Profil */}
       <motion.section 
         variants={staggerContainer}
         initial="hidden"
@@ -141,6 +154,7 @@ export default function ProfilePage() {
       >
         <h1 className="sr-only">Halaman profil pengguna AgriGrowth Monitor</h1>
 
+        {/* Panel Profil Card Hero (Foto inisial, nama, bio, tombol edit) */}
         <motion.div variants={fadeUpVariant} className="relative overflow-hidden rounded-[24px] bg-[#1f4b1a] text-white shadow-[0_24px_60px_rgba(23,52,4,0.25)]">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0)_42%),repeating-linear-gradient(45deg,rgba(255,255,255,0.04)_0,rgba(255,255,255,0.04)_1px,transparent_1px,transparent_14px)]" />
           <div className="relative flex flex-col gap-6 px-6 pb-6 pt-8 sm:px-10 lg:flex-row lg:items-start lg:gap-10">
@@ -197,7 +211,9 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
+        {/* Grid Informasi Detail Diri & Bar Keahlian */}
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          {/* Panel Detail Informasi Personal */}
           <motion.div variants={fadeUpVariant} className="rounded-[18px] border border-[#e0e5da] bg-white p-6 shadow-[0_14px_30px_rgba(54,90,26,0.08)]">
             <div className="flex items-center gap-3 text-[#365a1a]">
               <InfoBadge icon={Mail} label="Informasi" />
@@ -210,6 +226,7 @@ export default function ProfilePage() {
             </div>
           </motion.div>
 
+          {/* Panel Keahlian / Skill Meter */}
           <motion.div variants={fadeUpVariant} className="rounded-[18px] border border-[#e0e5da] bg-white p-6 shadow-[0_14px_30px_rgba(54,90,26,0.08)]">
             <div className="flex items-center gap-3 text-[#365a1a]">
               <InfoBadge icon={BarChart3} label="Keahlian" />
@@ -235,7 +252,9 @@ export default function ProfilePage() {
           </motion.div>
         </div>
 
+        {/* Grid Lahan Saya & Monitoring Cuaca */}
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {/* Panel Lahan Saya */}
           <motion.div variants={fadeUpVariant} className="rounded-[18px] border border-[#e0e5da] bg-white p-6 shadow-[0_14px_30px_rgba(54,90,26,0.08)]">
             <div className="flex items-center gap-3 text-[#365a1a]">
               <InfoBadge icon={Sprout} label="Lahan Saya" />
@@ -276,6 +295,7 @@ export default function ProfilePage() {
             </div>
           </motion.div>
 
+          {/* Panel Widget Pemantau Cuaca Hari Ini */}
           <motion.div variants={fadeUpVariant} className="rounded-[18px] border border-[#e0e5da] bg-white p-6 shadow-[0_14px_30px_rgba(54,90,26,0.08)]">
             <div className="flex items-center gap-3 text-[#365a1a]">
               <InfoBadge icon={CloudSun} label="Cuaca Hari Ini" />
@@ -292,6 +312,7 @@ export default function ProfilePage() {
           </motion.div>
         </div>
 
+        {/* Panel Aktivitas Terbaru Logbook */}
         <motion.div variants={fadeUpVariant} className="mt-6 rounded-[18px] border border-[#e0e5da] bg-white p-6 shadow-[0_14px_30px_rgba(54,90,26,0.08)]">
           <div className="flex items-center gap-3 text-[#365a1a]">
             <InfoBadge icon={History} label="Aktivitas Terbaru" />
@@ -321,6 +342,7 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
+        {/* Tombol pintas navigasi menu aksi bawah */}
         <motion.div variants={fadeUpVariant} className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
@@ -342,6 +364,7 @@ export default function ProfilePage() {
   );
 }
 
+// Sub-komponen lencana informasi badge
 function InfoBadge({ icon: Icon, label }: { icon: ElementType; label: string }) {
   return (
     <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.25em] text-[#365a1a]">
@@ -351,6 +374,7 @@ function InfoBadge({ icon: Icon, label }: { icon: ElementType; label: string }) 
   );
 }
 
+// Sub-komponen baris info
 function InfoRow({
   icon: Icon,
   label,
@@ -373,6 +397,7 @@ function InfoRow({
   );
 }
 
+// Sub-komponen kartu widget cuaca
 function WeatherCard({
   icon: Icon,
   label,

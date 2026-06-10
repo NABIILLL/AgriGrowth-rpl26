@@ -1,5 +1,6 @@
 "use client";
 
+// Import library React, router Next.js, toast, Supabase client, custom hooks, komponen UI global, Recharts untuk grafik, jsPDF, XLSX, dan Framer Motion
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
@@ -26,6 +27,7 @@ import * as htmlToImage from "html-to-image";
 import * as XLSX from "xlsx";
 import { motion, Variants } from "framer-motion";
 
+// Konfigurasi animasi transisi staggered dengan Framer Motion
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -36,6 +38,7 @@ const staggerContainer: Variants = {
   }
 };
 
+// Konfigurasi animasi fade up dengan Framer Motion
 const fadeUpVariant: Variants = {
   hidden: { opacity: 0, y: 30 },
   show: { 
@@ -45,17 +48,29 @@ const fadeUpVariant: Variants = {
   }
 };
 
+// URL Aset Gambar & Icon Default
 const imgLogo = "https://api.iconify.design/lucide:leaf.svg?color=%23365a1a";
 const imgProfile = "https://api.iconify.design/lucide:user-circle.svg?color=%23365a1a";
 
 
 
+// Interface untuk data tracker
+// Interface untuk data tracker
 interface TrackerData {
   id: string;
   title: string;
   plant_type: string;
   user_id: string;
+  created_at: string;
+  variety?: string | null;
+  planting_date?: string | null;
+  spacing_cm?: number | null;
+  plant_per_area?: number | null;
+  land_unit?: string | null;
+  land_area?: number | null;
 }
+
+// Interface untuk data input sampel baru
 interface SampleInput {
   plant_height: string;
   leaf_count: string;
@@ -64,11 +79,12 @@ interface SampleInput {
   light_condition: string;
   plant_condition: string;
   fertilizer_type: string;
-  land_area: string;
 }
 
+// Tipe data untuk satuan luas lahan
 type LandUnit = "ha" | "m2";
 
+// Tipe data konteks perkiraan panen
 type ForecastContext = {
   variety: string;
   plantingDate: string;
@@ -77,6 +93,7 @@ type ForecastContext = {
   landUnit: LandUnit;
 };
 
+// Interface untuk data input observasi sampel
 interface SampleObservationInput {
   sampleId: string;
   dayNumber: string;
@@ -87,9 +104,9 @@ interface SampleObservationInput {
   lightCondition: string;
   plantCondition: string;
   fertilizerType: string;
-  landArea: string;
 }
 
+// Interface untuk riwayat log analisis penyakit oleh AI
 interface DiseaseAnalysisLogData {
   id: string;
   tracker_id: string;
@@ -107,6 +124,7 @@ interface DiseaseAnalysisLogData {
   created_at?: string;
 }
 
+// Fungsi pembantu untuk membaca data JSON dari HTTP Response
 async function readJsonResponse(response: Response) {
   const body = await response.text();
   if (!body) return null;
@@ -118,18 +136,22 @@ async function readJsonResponse(response: Response) {
   }
 }
 
+// Fungsi pembantu untuk membuat JWT Auth Headers dari sesi Clerk aktif
 async function createAuthHeaders(session: ReturnType<typeof useSession>["session"]) {
   const token = await session?.getToken().catch(() => null);
   return token ? { Authorization: `Bearer ${token}` } : undefined;
 }
 
+// Komponen utama halaman Riwayat & Monitoring Lahan Tanaman
 export default function ObservationHistoryPage() {
+  // Mengambil client Supabase terautentikasi dengan token Clerk
   async function getAuthSupabase() {
     const token = await getClerkSupabaseToken();
     if (!token) throw new Error("Sesi login tidak ditemukan. Silakan login ulang.");
     return createClerkSupabaseClient(token);
   }
 
+  // State management untuk biaya, form biaya, tracker, judul, id tracker/sampel terpilih, log pertumbuhan, dan log analisis penyakit
   const [costs, setCosts] = useState<any[]>([]);
   const [editingCost, setEditingCost] = useState<any | null>(null);
   const [showCostForm, setShowCostForm] = useState(false);
@@ -179,6 +201,7 @@ export default function ObservationHistoryPage() {
   const [newTrackerSpacing, setNewTrackerSpacing] = useState("");
   const [newTrackerPlantPerArea, setNewTrackerPlantPerArea] = useState("");
   const [newTrackerLandUnit, setNewTrackerLandUnit] = useState<LandUnit>("ha");
+  const [newTrackerLandArea, setNewTrackerLandArea] = useState("1");
   const [forecastByTrackerId, setForecastByTrackerId] = useState<Record<string, ForecastContext>>({});
   const [sampleCount, setSampleCount] = useState<number>(3);
   const defaultSampleInput = {
@@ -189,7 +212,6 @@ export default function ObservationHistoryPage() {
     light_condition: "Sangat Baik",
     plant_condition: "Sehat",
     fertilizer_type: "NPK",
-    land_area: "",
   };
   const [sampleInputs, setSampleInputs] = useState<Array<any>>(Array.from({ length: 3 }, () => ({ ...defaultSampleInput })));
   const [expandedSample, setExpandedSample] = useState<number | null>(0);
@@ -203,10 +225,9 @@ export default function ObservationHistoryPage() {
     lightCondition: "Sangat Baik",
     plantCondition: "Sehat",
     fertilizerType: "NPK",
-    landArea: "1",
   });
   
-  // Analysis stats
+  // Menghitung statistik analisis pertumbuhan tanaman (tinggi, daun, rentang hari, dll.)
   const stats = useMemo(() => {
     const activeLogs = selectedSampleId
       ? sampleLogsRaw.filter((log) => String(log.sample_id) === String(selectedSampleId))
@@ -231,6 +252,45 @@ export default function ObservationHistoryPage() {
       avgLeafGrowth: ((last.leaf_count || 0) - (first.leaf_count || 0)) / daysSpan,
     };
   }, [selectedSampleId, sampleLogsRaw, logsRaw]);
+
+  // Menghitung statistik pertumbuhan keseluruhan meliputi semua sampel (menggunakan logsRaw yang merata-ratakan seluruh sampel)
+  const overallStats = useMemo(() => {
+    if (logsRaw.length === 0) {
+      return { startHeight: 0, endHeight: 0, startLeaf: 0, endLeaf: 0, daysSpan: 0, avgHeightGrowth: 0, avgLeafGrowth: 0 };
+    }
+
+    const sorted = [...logsRaw].sort((a, b) => a.day_number - b.day_number);
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const daysSpan = Math.max(1, last.day_number - first.day_number || 1);
+
+    return {
+      startHeight: first.plant_height || 0,
+      endHeight: last.plant_height || 0,
+      startLeaf: first.leaf_count || 0,
+      endLeaf: last.leaf_count || 0,
+      daysSpan,
+      avgHeightGrowth: ((last.plant_height || 0) - (first.plant_height || 0)) / daysSpan,
+      avgLeafGrowth: ((last.leaf_count || 0) - (first.leaf_count || 0)) / daysSpan,
+    };
+  }, [logsRaw]);
+  
+  const activeTracker = useMemo(() => {
+    return trackers.find((t) => t.id === selectedTrackerId) || null;
+  }, [trackers, selectedTrackerId]);
+
+  const forecastContext = useMemo(() => {
+    if (!activeTracker) return null;
+    return {
+      variety: activeTracker.variety || "",
+      plantingDate: activeTracker.planting_date || "",
+      spacingCm: activeTracker.spacing_cm ? Number(activeTracker.spacing_cm) : null,
+      plantPerArea: activeTracker.plant_per_area ? Number(activeTracker.plant_per_area) : null,
+      landUnit: (activeTracker.land_unit as LandUnit) || "ha",
+    };
+  }, [activeTracker]);
+
+  // Mengambil informasi data user dari hook useUser
   const { user, isLoading } = useUser();
   const userId = user?.id;
   const [isExporting, setIsExporting] = useState(false);
@@ -241,6 +301,7 @@ export default function ObservationHistoryPage() {
   const searchParams = useSearchParams();
   const trackerIdFromQuery = searchParams ? searchParams.get("trackerId") ?? undefined : undefined;
 
+  // Handler mengubah jumlah sampel di form pembuatan tracker (max 20 sampel)
   const handleSampleCountChange = (nextCount: number) => {
     const clampedCount = Math.min(20, Math.max(1, nextCount));
     setSampleCount(clampedCount);
@@ -252,6 +313,7 @@ export default function ObservationHistoryPage() {
     });
   };
 
+  // Handler mengubah isian data form sampel tertentu
   const updateSampleInput = (index: number, field: keyof SampleInput, value: string) => {
     setSampleInputs((prev) => {
       const next = [...prev];
@@ -260,6 +322,7 @@ export default function ObservationHistoryPage() {
     });
   };
 
+  // Fungsi pengecekan isian form sampel yang belum lengkap
   const getMissingSampleFields = (sample: SampleInput) => {
     const missing: string[] = [];
 
@@ -269,13 +332,14 @@ export default function ObservationHistoryPage() {
     if (sample.light_condition.trim() === "") missing.push("kondisi cahaya");
     if (sample.plant_condition.trim() === "") missing.push("kondisi tanaman");
     if (sample.fertilizer_type.trim() === "") missing.push("jenis pupuk");
-    if (sample.land_area.trim() === "") missing.push("luas lahan");
 
     return missing;
   };
 
+  // Memeriksa status isian form sampel
   const isSampleFilled = (sample: SampleInput) => getMissingSampleFields(sample).length === 0;
 
+  // Handler untuk menambahkan sampel baru ke tracker aktif via API call POST
   async function handleAddSamplePlant() {
     if (!userId) {
       toast.error("Anda harus login untuk menambah sampel", { id: "Anda harus login untuk menambah sampel" });
@@ -329,6 +393,7 @@ export default function ObservationHistoryPage() {
     }
   }
 
+  // Handler untuk menyimpan data tracker baru beserta data sampel awal ke database
   async function handleCreateTrackerWithSamples() {
     if (!userId) {
       toast.error("Anda harus login untuk membuat tracker", { id: "Anda harus login untuk membuat tracker" });
@@ -337,6 +402,12 @@ export default function ObservationHistoryPage() {
 
     if (!newTrackerName.trim()) {
       toast.error("Nama lahan wajib diisi", { id: "Nama lahan wajib diisi" });
+      return;
+    }
+
+    const landArea = parseFloat(newTrackerLandArea);
+    if (Number.isNaN(landArea) || landArea <= 0) {
+      toast.error("Luas lahan wajib diisi dan harus lebih dari 0", { id: "Luas lahan wajib diisi dan harus lebih dari 0" });
       return;
     }
 
@@ -361,7 +432,6 @@ export default function ObservationHistoryPage() {
         light_condition: sample.light_condition.trim(),
         plant_condition: sample.plant_condition.trim(),
         fertilizer_type: sample.fertilizer_type.trim(),
-        land_area: parseFloat(sample.land_area),
       };
 
       if (
@@ -373,9 +443,7 @@ export default function ObservationHistoryPage() {
         parsed.branch_count < 0 ||
         Number.isNaN(parsed.soil_ph) ||
         parsed.soil_ph < 0 ||
-        parsed.soil_ph > 14 ||
-        Number.isNaN(parsed.land_area) ||
-        parsed.land_area <= 0
+        parsed.soil_ph > 14
       ) {
         invalidMessage = `Nilai pada Sampel ${idx + 1} tidak valid`;
       }
@@ -403,7 +471,7 @@ export default function ObservationHistoryPage() {
       light_condition: parsedSamples[0].light_condition,
       plant_condition: parsedSamples[0].plant_condition,
       fertilizer_type: parsedSamples[0].fertilizer_type,
-      land_area: Number(avg(parsedSamples.map((item) => item.land_area)).toFixed(2)), // Rata-rata luas lahan
+      land_area: landArea, // Luas lahan dari tingkat tracker
     };
 
     const forecastContext: ForecastContext = {
@@ -428,6 +496,12 @@ export default function ObservationHistoryPage() {
           plant_type: id,
           sampleCount: normalizedSampleCount,
           samples: parsedSamples,
+          variety: newTrackerVariety.trim() || null,
+          planting_date: newTrackerPlantingDate || null,
+          spacing_cm: newTrackerSpacing.trim() ? Number.parseFloat(newTrackerSpacing) : null,
+          plant_per_area: newTrackerPlantPerArea.trim() ? Number.parseFloat(newTrackerPlantPerArea) : null,
+          land_unit: newTrackerLandUnit,
+          land_area: landArea,
         }),
       });
 
@@ -462,6 +536,7 @@ export default function ObservationHistoryPage() {
       setNewTrackerSpacing("");
       setNewTrackerPlantPerArea("");
       setNewTrackerLandUnit("ha");
+      setNewTrackerLandArea("1");
       setSampleCount(3);
       setSampleInputs(Array.from({ length: 3 }, () => ({ ...defaultSampleInput })));
       setExpandedSample(0);
@@ -475,7 +550,7 @@ export default function ObservationHistoryPage() {
     }
   }
 
-  // Fetch list of trackers first
+  // Mengambil daftar tracker lahan pertanian dari database Supabase
   useEffect(() => {
     async function fetchTrackers() {
       if (!id || isLoading || !userId) {
@@ -512,6 +587,11 @@ export default function ObservationHistoryPage() {
     }
     fetchTrackers();
   }, [id, userId, isLoading, trackerIdFromQuery]);
+
+  // Reset selected sample ID when tracker changes
+  useEffect(() => {
+    setSelectedSampleId(null);
+  }, [selectedTrackerId]);
 
   // If after loading there are no trackers, prompt to create one automatically
   useEffect(() => {
@@ -641,7 +721,6 @@ export default function ObservationHistoryPage() {
       lightCondition: "Sangat Baik",
       plantCondition: "Sehat",
       fertilizerType: "NPK",
-      landArea: "1",
     });
   };
 
@@ -683,6 +762,12 @@ export default function ObservationHistoryPage() {
       return;
     }
 
+    const selectedTracker = trackers.find((tracker) => tracker.id === selectedTrackerId);
+    if (!selectedTracker) {
+      toast.error("Tracker tidak ditemukan", { id: "Tracker tidak ditemukan" });
+      return;
+    }
+
     const sampleId = sampleObservationInput.sampleId || selectedSampleId || trackerSamples[0]?.id || "";
     if (!sampleId) {
       toast.error("Pilih sampel terlebih dahulu", { id: "Pilih sampel terlebih dahulu" });
@@ -694,7 +779,7 @@ export default function ObservationHistoryPage() {
     const leafCount = parseInt(sampleObservationInput.leafCount, 10);
     const branchCount = sampleObservationInput.branchCount ? parseInt(sampleObservationInput.branchCount, 10) : 0;
     const soilPh = parseFloat(sampleObservationInput.soilPh);
-    const landArea = parseFloat(sampleObservationInput.landArea);
+    const landArea = selectedTracker.land_area ? Number(selectedTracker.land_area) : 1;
 
     if (!dayNumber || dayNumber < 1) {
       toast.error("Masukkan hari pengamatan yang valid", { id: "Masukkan hari pengamatan yang valid" });
@@ -726,16 +811,6 @@ export default function ObservationHistoryPage() {
     }
     if (!sampleObservationInput.fertilizerType.trim()) {
       toast.error("Jenis pupuk wajib diisi", { id: "Jenis pupuk wajib diisi" });
-      return;
-    }
-    if (Number.isNaN(landArea) || landArea <= 0) {
-      toast.error("Luas lahan wajib diisi dan harus lebih dari 0", { id: "Luas lahan wajib diisi dan harus lebih dari 0" });
-      return;
-    }
-
-    const selectedTracker = trackers.find((tracker) => tracker.id === selectedTrackerId);
-    if (!selectedTracker) {
-      toast.error("Tracker tidak ditemukan", { id: "Tracker tidak ditemukan" });
       return;
     }
 
@@ -1209,6 +1284,7 @@ export default function ObservationHistoryPage() {
     );
   }
 
+  // Handler untuk mengunduh dan meng-upload dokumen Laporan Monitor Pertanian berformat PDF
   async function handleExportPDF() {
     if (!userId) {
       toast.error("Anda harus login untuk export PDF", { id: "Anda harus login untuk export PDF" });
@@ -1225,7 +1301,7 @@ export default function ObservationHistoryPage() {
     try {
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       
-      // Header
+      // Mengatur judul header laporan PDF
       doc.setFontSize(18);
       doc.setTextColor(54, 90, 26);
       doc.text("Laporan Monitor Pertanian - AgriGrowth", 14, 20);
@@ -1751,10 +1827,10 @@ export default function ObservationHistoryPage() {
                   <h2 className="mb-4 text-[20px] font-bold sm:text-[24px]">🔮 Prediksi Panen & Rekomendasi Pupuk</h2>
                   <PredictionsSection
                     plantType={id}
-                    avgHeightGrowth={stats.avgHeightGrowth}
-                    currentHeight={stats.endHeight}
+                    avgHeightGrowth={overallStats.avgHeightGrowth}
+                    currentHeight={overallStats.endHeight}
                     latestLog={logsRaw.length ? logsRaw[logsRaw.length - 1] : null}
-                    forecastContext={selectedTrackerId ? forecastByTrackerId[selectedTrackerId] : null}
+                    forecastContext={forecastContext}
                   />
                 </motion.div>
 
@@ -2075,10 +2151,6 @@ export default function ObservationHistoryPage() {
                     <option value="Layu">Layu</option>
                   </select>
                 </div>
-                <div>
-                  <label className="text-sm font-semibold">Luas Lahan (ha)</label>
-                  <input type="number" step="0.1" name="land_area" value={editingLog.land_area} onChange={(e) => setEditingLog({...editingLog, land_area: e.target.value})} className="w-full rounded border px-3 py-2" />
-                </div>
               </div>
               <div className="mt-4 flex justify-end gap-3">
                 <button onClick={() => setEditingLog(null)} className="rounded border px-4 py-2">Batal</button>
@@ -2254,7 +2326,19 @@ export default function ObservationHistoryPage() {
                     <option value="m2">Meter Persegi (m²)</option>
                   </select>
                 </div>
-                <div className="sm:col-span-2 rounded-xl border border-dashed border-[#365a1a]/25 bg-[#fafcf7] px-4 py-3 text-sm text-[#365a1a]/80">
+                <div>
+                  <label className="block text-sm font-semibold text-[#365a1a] mb-1">Luas Lahan ({newTrackerLandUnit})</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={newTrackerLandArea}
+                    onChange={(e) => setNewTrackerLandArea(e.target.value)}
+                    placeholder="Contoh: 1.5"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-[#365a1a] focus:ring-1 focus:ring-[#365a1a]"
+                  />
+                </div>
+                <div className="rounded-xl border border-dashed border-[#365a1a]/25 bg-[#fafcf7] px-4 py-3 text-sm text-[#365a1a]/80">
                   Data tambahan ini dipakai untuk memperkirakan waktu panen, estimasi hasil panen, dan dosis pupuk. Jika kosong, prediksi tetap berjalan tetapi akurasinya lebih rendah.
                 </div>
               </div>
@@ -2364,17 +2448,6 @@ export default function ObservationHistoryPage() {
                               <option value="Kandang">Kandang</option>
                               <option value="Organik Cair">Organik Cair</option>
                             </select>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Luas Lahan (ha)</label>
-                            <input
-                              type="number"
-                              min="0.1"
-                              step="0.1"
-                              value={sample.land_area}
-                              onChange={(e) => updateSampleInput(index, "land_area", e.target.value)}
-                              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                            />
                           </div>
                         </div>
                       )}
@@ -2544,17 +2617,6 @@ export default function ObservationHistoryPage() {
                         <option value="Kandang">Kandang</option>
                         <option value="Organik Cair">Organik Cair</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-[#365a1a] mb-1">Luas Lahan (ha) *</label>
-                      <input
-                        type="number"
-                        min="0.1"
-                        step="0.1"
-                        value={sampleObservationInput.landArea}
-                        onChange={(e) => updateSampleObservationInput("landArea", e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-[#365a1a] focus:ring-1 focus:ring-[#365a1a]"
-                      />
                     </div>
                   </div>
 

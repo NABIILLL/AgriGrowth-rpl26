@@ -1,8 +1,10 @@
 "use client";
 
+// Import library dan fungsi utilitas API admin yang dibutuhkan
 import { useEffect, useState } from "react";
 import { adminFetch } from "@/app/admin/_lib/adminApi";
 
+// Definisi tipe data untuk data pengguna, profil, tracker, observasi, dan sampel tracker
 type AdminUser = { id: string; user_metadata?: { name?: string | null } | null; email?: string | null };
 type SimpleProfile = { id: string; name?: string | null };
 type TrackerRow = { id: string; user_id: string };
@@ -30,6 +32,7 @@ type TrackerSample = {
   created_at?: string | null;
 };
 
+// State awal untuk formulir input log pertumbuhan baru
 const emptyForm = {
   tracker_id: "",
   day_number: "",
@@ -43,7 +46,9 @@ const emptyForm = {
   land_area: "",
 };
 
+// Komponen utama halaman Kelola Observasi/Logs Pertumbuhan (Admin)
 export default function AdminObservationsPage() {
+  // State management untuk log observasi, sample logs, tracker samples, loading status, error, formulir, dan ID log yang sedang diedit
   const [observations, setObservations] = useState<Observation[]>([]);
   const [growthSampleLogs, setGrowthSampleLogs] = useState<any[]>([]);
   const [trackerSamples, setTrackerSamples] = useState<TrackerSample[]>([]);
@@ -52,10 +57,11 @@ export default function AdminObservationsPage() {
   const [form, setForm] = useState({ ...emptyForm });
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Maps for user lookup
+  // Map untuk mempermudah pencarian nama profil dan pemetaan tracker ke user
   const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map());
   const [trackerUserMap, setTrackerUserMap] = useState<Map<string, string>>(new Map());
 
+  // Fungsi untuk mengambil data observasi, pengguna, dan tracker secara paralel dari API admin
   const loadObservations = async () => {
     setLoading(true);
     setError(null);
@@ -94,6 +100,7 @@ export default function AdminObservationsPage() {
     }
   };
 
+  // Memuat data saat pertama kali halaman di-render
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -103,6 +110,7 @@ export default function AdminObservationsPage() {
     return () => { mounted = false; };
   }, []);
 
+  // Handler untuk menyimpan data log observasi baru atau memperbarui data log yang ada (PATCH/POST)
   const handleSubmit = async () => {
     if (!form.tracker_id || !form.day_number) {
       setError("tracker_id dan day_number wajib diisi");
@@ -145,6 +153,7 @@ export default function AdminObservationsPage() {
     }
   };
 
+  // Handler untuk memuat data log observasi terpilih ke formulir agar dapat diedit
   const handleEdit = (item: Observation) => {
     setEditingId(item.id);
     setForm({
@@ -161,6 +170,7 @@ export default function AdminObservationsPage() {
     });
   };
 
+  // Handler untuk menghapus data log observasi berdasarkan ID
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus observasi ini?")) return;
     setError(null);
@@ -174,7 +184,9 @@ export default function AdminObservationsPage() {
   };
 
   return (
+    // Return JSX untuk merender UI Kelola Observasi/Logs Pertumbuhan
     <>
+      {/* Header Halaman dan Tombol Aksi Utama */}
       <div className="page-header">
         <div>
           <div className="page-title">Kelola Growth Logs</div>
@@ -186,13 +198,16 @@ export default function AdminObservationsPage() {
         </div>
       </div>
 
+      {/* Tampilan pesan kesalahan jika ada */}
       {error && (
         <div className="panel" style={{ marginBottom: 14 }}>
           <div style={{ padding: "12px 16px", color: "var(--red)" }}>{error}</div>
         </div>
       )}
 
+      {/* Grid Kiri (Ringkasan Statistik) dan Kanan (Form Input Log Baru) */}
       <div className="grid-equal" style={{ marginBottom: 14 }}>
+        {/* Panel Ringkasan Growth Logs */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-notes"></i> Ringkasan Growth Logs</div>
@@ -203,6 +218,7 @@ export default function AdminObservationsPage() {
             <div className="stat-cell"><div className="stat-cell-num">{trackerSamples.length}</div><div className="stat-cell-lbl">Tracker Samples</div></div>
           </div>
         </div>
+        {/* Panel Form Input Data Log Pertumbuhan */}
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title"><i className="ti ti-edit"></i> Form Growth Log</div>
@@ -222,6 +238,7 @@ export default function AdminObservationsPage() {
         </div>
       </div>
 
+      {/* Tabel Daftar Growth Logs */}
       <div className="panel">
         <div className="panel-header">
           <div className="panel-title"><i className="ti ti-list"></i> Daftar Growth Logs</div>
@@ -280,6 +297,7 @@ export default function AdminObservationsPage() {
         </div>
       </div>
 
+      {/* Tabel Daftar Tracker Samples */}
       <div className="panel" style={{ marginTop: 14 }}>
         <div className="panel-header">
           <div className="panel-title"><i className="ti ti-database"></i> Daftar Tracker Samples</div>
