@@ -7,10 +7,11 @@ export async function GET(request: Request) {
 
   try {
     const supabase = getSupabaseService();
-    const [growthLogsResult, trackerSamplesResult, sampleLogsResult] = await Promise.all([
+    const [growthLogsResult, trackerSamplesResult, sampleLogsResult, diseaseLogsResult] = await Promise.all([
       supabase.from("growth_logs").select("*").order("created_at", { ascending: false }),
       supabase.from("tracker_samples").select("id, tracker_id, sample_no, name, created_at").order("created_at", { ascending: false }),
       supabase.from("growth_sample_logs").select("*").order("created_at", { ascending: false }),
+      supabase.from("disease_analysis_logs").select("*").order("created_at", { ascending: false }),
     ]);
 
     if (growthLogsResult.error) {
@@ -25,11 +26,16 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: sampleLogsResult.error.message }, { status: 500 });
     }
 
+    if (diseaseLogsResult.error) {
+      return NextResponse.json({ error: diseaseLogsResult.error.message }, { status: 500 });
+    }
+
     return NextResponse.json({
       observations: growthLogsResult.data || [],
       growth_logs: growthLogsResult.data || [],
       tracker_samples: trackerSamplesResult.data || [],
       growth_sample_logs: sampleLogsResult.data || [],
+      disease_analysis_logs: diseaseLogsResult.data || [],
     });
   } catch (err) {
     // Fallback if SUPABASE_SERVICE_ROLE_KEY is missing
@@ -43,10 +49,11 @@ export async function GET(request: Request) {
       auth: { persistSession: false },
     });
     
-    const [growthLogsResult, trackerSamplesResult, sampleLogsResult] = await Promise.all([
+    const [growthLogsResult, trackerSamplesResult, sampleLogsResult, diseaseLogsResult] = await Promise.all([
       authClient.from("growth_logs").select("*").order("created_at", { ascending: false }),
       authClient.from("tracker_samples").select("id, tracker_id, sample_no, name, created_at").order("created_at", { ascending: false }),
       authClient.from("growth_sample_logs").select("*").order("created_at", { ascending: false }),
+      authClient.from("disease_analysis_logs").select("*").order("created_at", { ascending: false }),
     ]);
 
     if (growthLogsResult.error) {
@@ -61,11 +68,16 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: sampleLogsResult.error.message }, { status: 500 });
     }
 
+    if (diseaseLogsResult.error) {
+      return NextResponse.json({ error: diseaseLogsResult.error.message }, { status: 500 });
+    }
+
     return NextResponse.json({
       observations: growthLogsResult.data || [],
       growth_logs: growthLogsResult.data || [],
       tracker_samples: trackerSamplesResult.data || [],
       growth_sample_logs: sampleLogsResult.data || [],
+      disease_analysis_logs: diseaseLogsResult.data || [],
     });
   }
 }

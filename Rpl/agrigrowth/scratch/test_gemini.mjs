@@ -1,6 +1,23 @@
-// Native global fetch will be used
+import fs from 'fs';
+import path from 'path';
 
-const key = "AIzaSyAMFcFRjsTvwqyztsSG3LjB0T1vYleur2c";
+// Load key from process.env, or fallback to parsing .env.local
+let key = process.env.GEMINI_API_KEY;
+
+if (!key) {
+  try {
+    const envPath = path.resolve(process.cwd(), '.env.local');
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      const match = envContent.match(/^GEMINI_API_KEY\s*=\s*([^\s#]+)/m);
+      if (match) {
+        key = match[1].trim();
+      }
+    }
+  } catch (err) {
+    console.error("Gagal membaca .env.local:", err);
+  }
+}
 
 async function run() {
   try {
