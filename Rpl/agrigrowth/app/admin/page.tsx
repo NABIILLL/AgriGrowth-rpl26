@@ -48,6 +48,18 @@ type TrackerPrediction = {
   dataPoints: number;
 };
 
+type DiseaseAnalysisLog = {
+  id: string;
+  user_id: string;
+  tracker_id: string;
+  plant_type: string;
+  status: string;
+  diagnosis: string;
+  severity: string;
+  urgency: string;
+  created_at?: string | null;
+};
+
 // Fungsi pembantu untuk memformat tanggal ke format string sederhana
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
@@ -89,6 +101,7 @@ export default function AdminDashboardPage() {
   const [growthLogs, setGrowthLogs] = useState<GrowthLog[]>([]);
   const [growthSampleLogs, setGrowthSampleLogs] = useState<GrowthSampleLog[]>([]);
   const [trackerSamples, setTrackerSamples] = useState<TrackerSample[]>([]);
+  const [diseaseAnalysisLogs, setDiseaseAnalysisLogs] = useState<DiseaseAnalysisLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastSynced, setLastSynced] = useState<string>("");
@@ -218,6 +231,7 @@ export default function AdminDashboardPage() {
           setGrowthLogs(observationData.growth_logs || observationData.observations || []);
           setGrowthSampleLogs(observationData.growth_sample_logs || []);
           setTrackerSamples(observationData.tracker_samples || []);
+          setDiseaseAnalysisLogs(observationData.disease_analysis_logs || []);
           setLastSynced(new Date().toLocaleTimeString("id-ID"));
           setError(null);
         }
@@ -345,8 +359,20 @@ export default function AdminDashboardPage() {
         time: formatDate(item.created_at),
       }));
 
-    return [...recentAccounts, ...recentGrowthLogs, ...recentSampleLogs, ...recentTrackerSamples, ...recentTrackers].slice(0, 5);
-  }, [growthLogs, growthSampleLogs, trackerSamples, trackers, users, profileMap, trackerMap]);
+    const recentDiseaseLogs = [...diseaseAnalysisLogs]
+      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
+      .slice(0, 2)
+      .map((item) => ({
+        icon: "ti ti-activity",
+        tone: item.status === "Sehat" ? "g" : item.status === "Terdeteksi Penyakit" ? "r" : "a",
+        text: `Analisis AI (${item.plant_type}): ${item.status} - ${item.diagnosis}`,
+        time: formatDate(item.created_at),
+      }));
+
+    return [...recentAccounts, ...recentDiseaseLogs, ...recentGrowthLogs, ...recentSampleLogs, ...recentTrackerSamples, ...recentTrackers]
+      .sort((a, b) => (b.time || "").localeCompare(a.time || ""))
+      .slice(0, 5);
+  }, [growthLogs, growthSampleLogs, trackerSamples, trackers, users, profileMap, trackerMap, diseaseAnalysisLogs]);
 
   return (
     // Return JSX UI Dashboard Utama Admin
@@ -385,6 +411,11 @@ export default function AdminDashboardPage() {
           <div className="kpi-icon b"><i className="ti ti-notes"></i></div>
           <div className="kpi-num">{growthLogs.length}</div>
           <div className="kpi-label">Growth Logs</div>
+        </div>
+        <div className="kpi-card r">
+          <div className="kpi-icon r"><i className="ti ti-activity"></i></div>
+          <div className="kpi-num">{diseaseAnalysisLogs.length}</div>
+          <div className="kpi-label">AI Analyses</div>
         </div>
       </div>
 
@@ -443,6 +474,46 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
+        {/* Panel Log Analisis Penyakit AI */}
+        <div className="panel">
+          <div className="panel-header">
+            <div className="panel-title"><i className="ti ti-activity"></i> Analisis Penyakit AI</div>
+            <div className="panel-actions">
+              <span className="mini-btn active" style={{ cursor: "default" }}>Terbaru</span>
+            </div>
+          </div>
+
+          <div style={{ padding: 12, display: "grid", gap: 12 }}>
+            {diseaseAnalysisLogs.length === 0 ? (
+              <div style={{ padding: "12px 0", color: "var(--text4)" }}>Belum ada riwayat analisis penyakit AI.</div>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {diseaseAnalysisLogs.slice(0, 4).map((item) => (
+                  <div key={item.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 10, background: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, color: "var(--text2)", fontSize: "13px" }}>{item.diagnosis || "Tidak Ada Diagnosis"}</div>
+                      <div style={{ fontSize: 11, color: "var(--text4)" }}>
+                        {item.plant_type} · {formatDate(item.created_at)}
+                      </div>
+                    </div>
+                    <span 
+                      className="badge" 
+                      style={{ 
+                        cursor: "default",
+                        background: item.status === "Sehat" ? "rgba(43,74,51,0.1)" : item.status === "Terdeteksi Penyakit" ? "rgba(224,82,82,0.15)" : "rgba(217,141,0,0.15)",
+                        color: item.status === "Sehat" ? "var(--g700)" : item.status === "Terdeteksi Penyakit" ? "var(--red)" : "var(--amber)",
+                        border: "none",
+                        fontWeight: 600
+                      }}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Grid Grafik Batang Harian & Feed Aktivitas Live */}
