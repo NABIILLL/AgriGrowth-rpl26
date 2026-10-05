@@ -2,7 +2,7 @@
 
 Platform web untuk membantu mahasiswa pertanian dan petani mencatat, memantau, serta menganalisis data budidaya tanaman. AgriGrowth Monitor mendukung komoditas padi, jagung, dan bawang merah dalam satu ruang kerja digital.
 
-![Tampilan AgriGrowth Monitor](public/foto%20dashboard.png)
+![Tampilan AgriGrowth Monitor](public/logo%202.png)
 
 ## Fitur utama
 
